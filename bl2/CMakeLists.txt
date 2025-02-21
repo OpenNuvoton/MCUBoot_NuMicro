@@ -2,6 +2,7 @@ add_executable(bl2
 )
 
 add_subdirectory(ext/mcuboot)
+add_subdirectory(platform)
 
 # target_include_directories(bl2
 #     PRIVATE
@@ -26,7 +27,9 @@ target_compile_definitions(bl2
         $<$<BOOL:${DEFAULT_MCUBOOT_FLASH_MAP}>:DEFAULT_MCUBOOT_FLASH_MAP>
 )
 
-add_subdirectory(platform)
+add_custom_command(TARGET bl2
+        POST_BUILD
+        COMMAND ${ARM_ELF2BIN} --bin ${EXECUTABLE_OUTPUT_PATH}/bl2.elf --output ${EXECUTABLE_OUTPUT_PATH}/bl2.bin)
 
 ######################### MBEDTLS ##############################################
 
