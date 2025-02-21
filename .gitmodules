@@ -1,0 +1,11 @@
+[submodule "bl2/platform/m2354/bsp"]
+	path = bl2/platform/m2354/bsplib/bsp
+	url = https://github.com/OpenNuvoton/M2354BSP
+[submodule "mcuboot"]
+	path = lib/ext/mcubootlib/mcuboot
+	url = https://github.com/mcu-tools/mcuboot.git
+	branch = v2.1.0
+[submodule "mbedtls"]
+	path = lib/ext/mbedtlslib/mbedtls
+	url = https://github.com/Mbed-TLS/mbedtls.git
+	branch = v3.6.2
