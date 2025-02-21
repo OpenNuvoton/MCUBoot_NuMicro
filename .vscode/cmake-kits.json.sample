@@ -1,0 +1,6 @@
+[
+    {
+        "name": "Arm Compiler",
+        "toolchainFile": "toolchain/armclang.cmake"
+    }
+]
