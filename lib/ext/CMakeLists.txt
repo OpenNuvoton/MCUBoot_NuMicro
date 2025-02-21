@@ -1,0 +1,2 @@
+add_subdirectory(mbedtlslib)
+add_subdirectory(mcubootlib)
