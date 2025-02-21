@@ -9,3 +9,6 @@
 	path = lib/ext/mbedtlslib/mbedtls
 	url = https://github.com/Mbed-TLS/mbedtls.git
 	branch = v3.6.2
+[submodule "bl2/platform/m3331/bsplib/bsp"]
+	path = bl2/platform/m3331/bsplib/bsp
+	url = ssh://hcrdgit4/M3331/bsp
