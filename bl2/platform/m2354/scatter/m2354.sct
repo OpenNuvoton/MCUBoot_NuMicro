@@ -1,7 +1,5 @@
 #! armclang -E --target=arm-arm-none-eabi -mcpu=cortex-m23 -xc
 
-#define STACK_SIZE        0x00004000
-
 /*----------------------------------------------------------------------------
   Scatter Region definition
  *----------------------------------------------------------------------------*/
@@ -13,11 +11,7 @@ LR_ROM 0 0x80000 {
         .ANY (+XO)
     }
 
-    STACK +0 ALIGN 32 STACK_SIZE {
-        *.o (.STACK)
-    }
-
-    RW_RAM AlignExpr(+0,8) {
+    RW_RAM 0x20000000 ALIGN 8 {
         *(+RW +ZI)
     }
 }
