@@ -16,11 +16,9 @@ target_include_directories(platform_region_defs
 target_sources(platform_bl2_lib
     PRIVATE
         boot_hal.c
-        uart_stdout.c
 )
 
 target_link_libraries(platform_bl2_lib
     PUBLIC
         bsp_lib
 )
-

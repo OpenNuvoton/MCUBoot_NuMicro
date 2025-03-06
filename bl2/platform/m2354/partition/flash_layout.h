@@ -59,9 +59,12 @@
 #define FLASH_DEV_NAME      Driver_FLASH0
 
 #define FLASH_DEV_NAME_0    FLASH_DEV_NAME
-#define FLASH_DEVICE_ID_0   (888) // # FLASH_DEVICE_ID // PH
+#define FLASH_DEVICE_ID_0   FLASH_DEVICE_ID
 
 #define FLASH_DEV_NAME_2    FLASH_DEV_NAME
-#define FLASH_DEVICE_ID_2   (888) // # FLASH_DEVICE_ID // PH
+#define FLASH_DEVICE_ID_2   FLASH_DEVICE_ID
+
+/* Smallest flash programmable unit in bytes */
+#define TFM_HAL_FLASH_PROGRAM_UNIT       (0x4)
 
 #endif

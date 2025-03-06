@@ -1,12 +1,15 @@
 add_executable(bl2
+    src/flash_map.c
+    $<$<BOOL:${DEFAULT_MCUBOOT_FLASH_MAP}>:src/default_flash_map.c>
 )
 
 add_subdirectory(ext/mcuboot)
 add_subdirectory(platform)
 
-# target_include_directories(bl2
-#     PRIVATE
-# )
+target_include_directories(bl2
+    PRIVATE
+        $<BUILD_INTERFACE:${NU_MCUBOOT_PATH}/boot/bootutil/src>
+)
 
 target_link_libraries(bl2
     PRIVATE

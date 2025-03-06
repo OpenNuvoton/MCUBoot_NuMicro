@@ -2,5 +2,5 @@
     "cmake.generator": "Ninja",
     "cmake.configureSettings": {
         "CMAKE_SYSTEM_PROCESSOR":"cortex-m23"
-    },
+    }
 }

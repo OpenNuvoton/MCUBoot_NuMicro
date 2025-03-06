@@ -38,9 +38,11 @@ target_link_libraries(mbedcrypto
         mbedtls_config
 )
 
-target_include_directories(mbedcrypto PRIVATE
-    ${NU_MBEDTLS_PATH}/include
-    ${NU_MBEDTLS_PATH}/library
+target_include_directories(mbedcrypto
+    PUBLIC
+        ${NU_MBEDTLS_PATH}/include
+    PRIVATE
+        ${NU_MBEDTLS_PATH}/library
 )
 
 add_library(mbedtls_lib INTERFACE)

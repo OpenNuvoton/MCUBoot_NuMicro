@@ -15,15 +15,15 @@ target_sources(bsp_lib
         bsp/Library/StdDriver/src/uart.c
         bsp/Library/StdDriver/src/clk.c
         bsp/Library/StdDriver/src/sys.c
+        bsp/Library/StdDriver/src/fmc.c
 )
 
 set_source_files_properties(bsp/Library/Device/Nuvoton/M2354/Source/ARM/startup_M2354.s
     PROPERTIES
-        COMPILE_FLAGS "-Wa,--pd,\"Stack_Size EQU 0x1000\""
+        COMPILE_FLAGS "-Wa,--pd,\"Stack_Size EQU 0x4000\""
 )
 
 target_compile_definitions(bsp_lib
     PUBLIC
-        # DEBUG_PORT=UART1
         __MICROLIB
 )

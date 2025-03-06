@@ -1,9 +1,17 @@
 #include "NuMicro.h"
 #include "boot_hal.h"
+#include "Driver_Flash.h"
+#include "flash_layout.h"
+
+#ifdef FLASH_DEV_NAME
+extern ARM_DRIVER_FLASH FLASH_DEV_NAME;
+#endif /* FLASH_DEV_NAME */
 
 /* bootloader platform-specific hw initialization */
 int32_t boot_platform_init(void)
 {
+    int32_t result;
+
     SYS_UnlockReg();
 
     /* Enable HIRC clock */
@@ -29,6 +37,13 @@ int32_t boot_platform_init(void)
     SET_UART0_TXD_PA7();
 
     UART_Open(UART0, 115200);
+
+#ifdef FLASH_DEV_NAME
+    result = FLASH_DEV_NAME.Initialize(NULL);
+    if (result != ARM_DRIVER_OK) {
+        return 1;
+    }
+#endif /* FLASH_DEV_NAME */
 
     return 0;
 }

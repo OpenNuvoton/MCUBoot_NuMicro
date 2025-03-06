@@ -9,6 +9,15 @@ extern "C" {
 #include "region_defs.h"
 #include "Driver_Flash.h"
 
+/*
+ * For now, we only support one flash device.
+ *
+ * Pick a random device ID for it that's unlikely to collide with
+ * anything "real".
+ */
+#define FLASH_DEVICE_ID                 100
+#define FLASH_DEVICE_BASE               FLASH_BASE_ADDRESS
+
 /**
  * @brief Structure describing an area on a flash device.
  *

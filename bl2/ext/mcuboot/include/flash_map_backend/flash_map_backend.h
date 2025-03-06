@@ -72,7 +72,7 @@ static inline int flash_area_get_sector(const struct flash_area* fap, uint32_t o
         return -1;
 
     fs_off = fap->fa_off + off;
-    page_size = FLASH_AREA_IMAGE_SECTOR_SIZE; // DRV_FLASH_AREA(fap)->GetInfo()->page_size; // PH 
+    page_size = DRV_FLASH_AREA(fap)->GetInfo()->page_size;
 
     sector->fs_off = (fs_off / page_size) * page_size;
     sector->fs_size = page_size;
