@@ -1,0 +1,90 @@
+#include "fmc_drv.h"
+
+int32_t NVT_FMC_Read(uint32_t addr, uint32_t *data)
+{
+    int32_t timeout_cnt;
+
+    if (data == NULL)
+    {
+        return NVT_FMC_PARAMETER;
+    }
+
+    FMC->ISPCMD = FMC_ISPCMD_READ;
+    FMC->ISPADDR = addr;
+    FMC->ISPTRG = FMC_ISPTRG_ISPGO_Msk;
+
+    timeout_cnt = FMC_TIMEOUT_READ;
+
+    while(FMC->ISPSTS & FMC_ISPSTS_ISPBUSY_Msk)
+    {
+        if(timeout_cnt-- <= 0)
+        {
+            return NVT_FMC_TIMEOUT;
+        }
+    }
+
+    if(FMC->ISPSTS & FMC_ISPSTS_ISPFF_Msk)
+    {
+        FMC->ISPSTS |= FMC_ISPSTS_ISPFF_Msk;
+        return NVT_FMC_ISPFF;
+    }
+
+    *data = FMC->ISPDAT;
+
+    return NVT_FMC_OK;
+}
+
+int32_t NVT_FMC_Program(uint32_t addr, uint64_t dword)
+{
+    int32_t timeout_cnt;
+
+    FMC->ISPCMD  = FMC_ISPCMD_PROGRAM_64;
+    FMC->ISPADDR = addr;
+    FMC->MPDAT0  = (uint32_t)( dword & 0x00000000FFFFFFFF);
+    FMC->MPDAT1  = (uint32_t)((dword & 0xFFFFFFFF00000000) >> 32);
+    FMC->ISPTRG  = FMC_ISPTRG_ISPGO_Msk;
+
+    timeout_cnt = FMC_TIMEOUT_WRITE;
+    while(FMC->ISPSTS & FMC_ISPSTS_ISPBUSY_Msk)
+    {
+        if(timeout_cnt-- <= 0)
+        {
+            return NVT_FMC_TIMEOUT;
+        }
+    }
+
+    if(FMC->ISPSTS & FMC_ISPSTS_ISPFF_Msk)
+    {
+        FMC->ISPSTS |= FMC_ISPSTS_ISPFF_Msk;
+        return NVT_FMC_ISPFF;
+    }
+
+    return NVT_FMC_OK;
+}
+
+int32_t NVT_FMC_Erase(uint32_t addr)
+{
+    int32_t timeout_cnt;
+
+    FMC->ISPCMD = FMC_ISPCMD_PAGE_ERASE;
+    FMC->ISPADDR = addr;
+    FMC->ISPTRG = FMC_ISPTRG_ISPGO_Msk;
+
+    timeout_cnt = FMC_TIMEOUT_ERASE;
+
+    while(FMC->ISPSTS & FMC_ISPSTS_ISPBUSY_Msk)
+    {
+        if(timeout_cnt-- <= 0)
+        {
+            return NVT_FMC_TIMEOUT;
+        }
+    }
+
+    if(FMC->ISPSTS & FMC_ISPSTS_ISPFF_Msk)
+    {
+        FMC->ISPSTS |= FMC_ISPSTS_ISPFF_Msk;
+        return NVT_FMC_ISPFF;
+    }
+
+    return NVT_FMC_OK;
+}

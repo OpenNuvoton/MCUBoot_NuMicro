@@ -12,7 +12,7 @@ void stdio_uninit(void)
 
 int stdio_output_string(const unsigned char *str, uint32_t len)
 {
-    (str);
+    (void)(str);
 
     return len;
 }

@@ -22,6 +22,7 @@ target_include_directories(platform_common_interface
 target_sources(platform_bl2_lib
     PRIVATE
         common/Driver_Flash.c
+        common/fmc_drv.c
         common/uart_stdout.c
         common/exit.c
         common/boot.c

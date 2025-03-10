@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include "Driver_Flash.h"
 #include "NuMicro.h"
+#include "fmc_drv.h"
 #include "flash_layout.h"
 #include "region_defs.h"
 
@@ -103,7 +104,7 @@ static ARM_FLASH_INFO ARM_FLASH0_DEV_DATA =
     .sector_count = FMC_APROM_SIZE / FMC_FLASH_PAGE_SIZE,
     .sector_size  = FMC_FLASH_PAGE_SIZE,
     .page_size    = FMC_FLASH_PAGE_SIZE,
-    .program_unit = 4,
+    .program_unit = 8,
     .erased_value = 0xFF
 };
 
@@ -140,8 +141,6 @@ static int32_t ARM_Flash_Initialize(ARM_Flash_SignalEvent_t cb_event)
     FMC_Open();
     FMC_ENABLE_AP_UPDATE();
     FMC_ENABLE_LD_UPDATE();
-
-    printf("FLASH OPENED\n");
 
     return ARM_DRIVER_OK;
 }
@@ -183,8 +182,8 @@ static int32_t ARM_Flash_EraseSector(uint32_t addr)
         return ARM_DRIVER_ERROR_PARAMETER;
     }
 
-    ret = FMC_Erase(start_addr);
-    if (ret != 0)
+    ret = NVT_FMC_Erase(addr);
+    if (ret != NVT_FMC_OK)
     {
         return ARM_DRIVER_ERROR;
     }
@@ -208,7 +207,7 @@ static int32_t ARM_Flash_ReadData(uint32_t addr, void *data, uint32_t cnt)
         return ARM_DRIVER_ERROR_PARAMETER;
     }
 
-     pu8 = (uint8_t*)data;
+    pu8 = (uint8_t*)data;
 
     for(i = 0; i < cnt; i++)
     {
@@ -227,8 +226,8 @@ static int32_t ARM_Flash_ProgramData(uint32_t addr, const void *data, uint32_t c
     int32_t rc = 0;
     uint32_t dst_offst;
     uint32_t src_offst;
-    uint32_t word;
     int32_t ret;
+    uint64_t dword;
 
     /* Conversion between data items and bytes */
     cnt *= data_width_byte[DriverCapabilities.data_width];
@@ -243,18 +242,18 @@ static int32_t ARM_Flash_ProgramData(uint32_t addr, const void *data, uint32_t c
     }
 
     src_offst = 0;
-    for (dst_offst = 0; dst_offst < cnt; dst_offst += 4)
+    for (dst_offst = 0; dst_offst < cnt; dst_offst += sizeof(dword))
     {
         /* Create local copy to avoid unaligned access */
-        memcpy(&word, data + src_offst, sizeof(word));
+        memcpy(&dword, data + src_offst, sizeof(dword));
 
-        ret = FMC_Write(start_addr + dst_offst, word);
+        ret = NVT_FMC_Program(start_addr + dst_offst, dword);
         if (ret != 0)
         {
             return ARM_DRIVER_ERROR;
         }
 
-        src_offst += sizeof(word);
+        src_offst += sizeof(dword);
     }
 
     cnt /= data_width_byte[DriverCapabilities.data_width];
@@ -267,17 +266,25 @@ static int32_t ARM_Flash_EraseChip(void)
     uint32_t i;
     uint32_t addr = FLASH0_DEV->memory_base;
     int32_t rc = ARM_DRIVER_ERROR_UNSUPPORTED;
+    int32_t ret;
 
     /* Check driver capability erase_chip bit */
     if(DriverCapabilities.erase_chip == 1)
     {
         for(i = 0; i < FLASH0_DEV->data->sector_count; i++)
         {
-            FMC_Erase(addr);
+            ret = NVT_FMC_Erase(addr);
+            if (ret != NVT_FMC_OK)
+            {
+                rc = ARM_DRIVER_ERROR;
+                goto finish;
+            }
             addr += FLASH0_DEV->data->sector_size;
-            rc = ARM_DRIVER_OK;
         }
     }
+
+    rc = ARM_DRIVER_OK;
+finish:
     return rc;
 }
 
