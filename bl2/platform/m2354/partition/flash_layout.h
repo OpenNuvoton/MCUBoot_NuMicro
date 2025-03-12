@@ -65,6 +65,6 @@
 #define FLASH_DEVICE_ID_2   FLASH_DEVICE_ID
 
 /* Smallest flash programmable unit in bytes */
-#define TFM_HAL_FLASH_PROGRAM_UNIT       (0x4)
+#define TFM_HAL_FLASH_PROGRAM_UNIT       (0x8)
 
 #endif

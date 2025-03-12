@@ -19,7 +19,7 @@ target_link_libraries(bl2
 target_link_options(bl2
     PRIVATE
         --library_type=microlib
-        --verbose
+        --info=sizes,totals
         --symbols
         --map
         --scatter=${CMAKE_CURRENT_SOURCE_DIR}/platform/${PLATFORM_NAME}/scatter/${PLATFORM_NAME}.sct

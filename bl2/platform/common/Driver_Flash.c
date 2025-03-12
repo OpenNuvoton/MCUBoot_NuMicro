@@ -59,21 +59,6 @@ static const ARM_FLASH_CAPABILITIES DriverCapabilities =
     1  /* erase_chip */
 };
 
-static int32_t is_range_valid(struct arm_flash_dev_t *flash_dev,
-                              uint32_t offset)
-{
-    uint32_t flash_size = 0;
-    int32_t rc = 0;
-
-    flash_size = (flash_dev->data->sector_count * flash_dev->data->sector_size);
-
-    if(offset >= flash_size)
-    {
-        rc = -1;
-    }
-    return rc;
-}
-
 static int32_t is_write_aligned(struct arm_flash_dev_t *flash_dev,
                                 uint32_t param)
 {
@@ -110,15 +95,60 @@ static ARM_FLASH_INFO ARM_FLASH0_DEV_DATA =
 
 static struct arm_flash_dev_t ARM_FLASH0_DEV =
 {
-    .memory_base = FMC_APROM_BASE,
+    .memory_base = 0,
     .data        = &(ARM_FLASH0_DEV_DATA)
 };
 
 struct arm_flash_dev_t *FLASH0_DEV = &ARM_FLASH0_DEV;
 
+static ARM_FLASH_INFO ARM_FLASH1_DEV_DATA =
+{
+    .sector_info = NULL,
+    .sector_count = FMC_LDROM_SIZE / FMC_FLASH_PAGE_SIZE,
+    .sector_size  = FMC_FLASH_PAGE_SIZE,
+    .page_size    = FMC_FLASH_PAGE_SIZE,
+    .program_unit = 8,
+    .erased_value = 0xFF
+};
+
+static struct arm_flash_dev_t ARM_FLASH1_DEV =
+{
+    .memory_base = 0,
+    .data        = &(ARM_FLASH1_DEV_DATA)
+};
+
+struct arm_flash_dev_t *FLASH1_DEV = &ARM_FLASH1_DEV;
+
 /*
  * Functions
  */
+
+static int32_t is_range_valid_internal(uint32_t fa_off,
+                               uint32_t sector_count,
+                               uint32_t sector_size,
+                               uint32_t addr)
+{
+    uint32_t flash_size = 0;
+    int32_t rc = 0;
+
+    flash_size = (sector_count * sector_size);
+
+    if((addr - fa_off) >= flash_size)
+    {
+        rc = -1;
+    }
+    return rc;
+}
+
+static int32_t is_range_valid_APROM(uint32_t addr)
+{
+    return is_range_valid_internal(0, FLASH0_DEV->data->sector_count, FLASH0_DEV->data->sector_size, addr);
+}
+
+static int32_t is_range_valid_LDROM(uint32_t addr)
+{
+    return is_range_valid_internal(FMC_LDROM_BASE, FLASH1_DEV->data->sector_count, FLASH1_DEV->data->sector_size, addr);
+}
 
 static ARM_DRIVER_VERSION ARM_Flash_GetVersion(void)
 {
@@ -167,20 +197,9 @@ static int32_t ARM_Flash_PowerControl(ARM_POWER_STATE state)
     }
 }
 
-
-static int32_t ARM_Flash_EraseSector(uint32_t addr)
+static int32_t ARM_Flash_EraseSector_Internal(uint32_t addr)
 {
-    volatile uint32_t mem_base = FLASH0_DEV->memory_base;
-    uint32_t start_addr = mem_base + addr;
-    uint32_t rc = 0;
     int32_t ret;
-
-    rc  = is_range_valid(FLASH0_DEV, addr);
-    rc |= is_sector_aligned(FLASH0_DEV, addr);
-    if(rc != 0)
-    {
-        return ARM_DRIVER_ERROR_PARAMETER;
-    }
 
     ret = NVT_FMC_Erase(addr);
     if (ret != NVT_FMC_OK)
@@ -191,63 +210,149 @@ static int32_t ARM_Flash_EraseSector(uint32_t addr)
     return ARM_DRIVER_OK;
 }
 
-static int32_t ARM_Flash_ReadData(uint32_t addr, void *data, uint32_t cnt)
+static int32_t ARM_Flash_EraseSector_APROM(uint32_t addr)
 {
-    uint32_t start_addr = FLASH0_DEV->memory_base + addr;
-    int32_t rc = 0;
-    uint8_t* pu8;
-    uint32_t i, taddr;
+    uint32_t rc = 0;
+    int32_t ret;
+
+    rc  = is_range_valid_APROM(addr);
+    rc |= is_sector_aligned(FLASH0_DEV, addr);
+    if (rc != 0)
+    {
+        return ARM_DRIVER_ERROR_PARAMETER;
+    }
+
+    ret = ARM_Flash_EraseSector_Internal(addr);
+    if (ret != ARM_DRIVER_OK)
+    {
+        return ARM_DRIVER_ERROR;
+    }
+
+    return ARM_DRIVER_OK;
+}
+
+static int32_t ARM_Flash_EraseSector_LDROM(uint32_t addr)
+{
+    uint32_t rc = 0;
+    int32_t ret;
+
+    rc  = is_range_valid_LDROM(addr);
+    rc |= is_sector_aligned(FLASH1_DEV, addr);
+    if (rc != 0)
+    {
+        return ARM_DRIVER_ERROR_PARAMETER;
+    }
+
+    ret = ARM_Flash_EraseSector_Internal(addr);
+    if (ret != ARM_DRIVER_OK)
+    {
+        return ARM_DRIVER_ERROR;
+    }
+
+    return ARM_DRIVER_OK;
+}
+
+static int32_t ARM_Flash_ReadData_Internal(uint32_t start_addr, void *data, uint32_t sz)
+{
+    uint8_t *dest;
+    uint32_t remain;
+    uint32_t addr;
+    uint32_t r_data;
+    uint32_t i;
+    int32_t ret;
+
+    dest = data;
+    remain = sz;
+    addr = start_addr;
+
+    while (remain > 0)
+    {
+        ret = NVT_FMC_Read(addr, &r_data);
+        if (ret != NVT_FMC_OK)
+        {
+            return ARM_DRIVER_ERROR;
+        }
+
+        if (remain > 4)
+        {
+            memcpy(dest, &r_data, 4);
+            dest += 4;
+            addr += 4;
+            remain -= 4;
+        }
+        else
+        {
+            memcpy(dest, &r_data, remain);
+            break;
+        }
+    }
+
+    return ARM_DRIVER_OK;
+}
+
+static int32_t ARM_Flash_ReadData_APROM(uint32_t addr, void *data, uint32_t cnt)
+{
+    int32_t rc;
+    uint32_t sz;
+    int32_t ret;
 
     /* Conversion between data items and bytes */
-    cnt *= data_width_byte[DriverCapabilities.data_width];
+    sz = cnt * data_width_byte[DriverCapabilities.data_width];
 
     /* Check flash memory boundaries */
-    rc = is_range_valid(FLASH0_DEV, addr + cnt);
+    rc = is_range_valid_APROM(addr + sz);
     if (rc != 0) {
         return ARM_DRIVER_ERROR_PARAMETER;
     }
 
-    pu8 = (uint8_t*)data;
-
-    for(i = 0; i < cnt; i++)
+    ret = ARM_Flash_ReadData_Internal(addr, data, sz);
+    if (ret != ARM_DRIVER_OK)
     {
-        taddr = start_addr + i;
-        pu8[i] = *(uint8_t*)taddr;
+        return ARM_DRIVER_ERROR;
     }
 
-    cnt /= data_width_byte[DriverCapabilities.data_width];
     return cnt;
 }
 
-static int32_t ARM_Flash_ProgramData(uint32_t addr, const void *data, uint32_t cnt)
+static int32_t ARM_Flash_ReadData_LDROM(uint32_t addr, void *data, uint32_t cnt)
 {
-    volatile uint32_t mem_base = FLASH0_DEV->memory_base;
-    uint32_t start_addr = mem_base + addr;
+    int32_t rc;
+    uint32_t sz;
+    int32_t ret;
+
+    /* Conversion between data items and bytes */
+    sz = cnt * data_width_byte[DriverCapabilities.data_width];
+
+    /* Check flash memory boundaries */
+    rc = is_range_valid_LDROM(addr + sz);
+    if (rc != 0) {
+        return ARM_DRIVER_ERROR_PARAMETER;
+    }
+
+    ret = ARM_Flash_ReadData_Internal(addr, data, sz);
+    if (ret != ARM_DRIVER_OK)
+    {
+        return ARM_DRIVER_ERROR;
+    }
+
+    return cnt;
+}
+
+static int32_t ARM_Flash_ProgramData_Internal(uint32_t addr, const void *data, uint32_t sz)
+{
     int32_t rc = 0;
     uint32_t dst_offst;
     uint32_t src_offst;
     int32_t ret;
     uint64_t dword;
 
-    /* Conversion between data items and bytes */
-    cnt *= data_width_byte[DriverCapabilities.data_width];
-
-    /* Check flash memory boundaries and alignment with minimal write size */
-    rc  = is_range_valid(FLASH0_DEV, addr + cnt);
-    rc |= is_write_aligned(FLASH0_DEV, addr);
-    rc |= is_write_aligned(FLASH0_DEV, cnt);
-    if(rc != 0)
-    {
-        return ARM_DRIVER_ERROR_PARAMETER;
-    }
-
     src_offst = 0;
-    for (dst_offst = 0; dst_offst < cnt; dst_offst += sizeof(dword))
+    for (dst_offst = 0; dst_offst < sz; dst_offst += sizeof(dword))
     {
         /* Create local copy to avoid unaligned access */
         memcpy(&dword, data + src_offst, sizeof(dword));
 
-        ret = NVT_FMC_Program(start_addr + dst_offst, dword);
+        ret = NVT_FMC_Program(addr + dst_offst, dword);
         if (ret != 0)
         {
             return ARM_DRIVER_ERROR;
@@ -256,36 +361,59 @@ static int32_t ARM_Flash_ProgramData(uint32_t addr, const void *data, uint32_t c
         src_offst += sizeof(dword);
     }
 
-    cnt /= data_width_byte[DriverCapabilities.data_width];
+    return ARM_DRIVER_OK;
+}
+
+static int32_t ARM_Flash_ProgramData_APROM(uint32_t addr, const void *data, uint32_t cnt)
+{
+    int32_t ret;
+    int32_t rc;
+    uint32_t sz;
+
+    sz = cnt * data_width_byte[DriverCapabilities.data_width];
+
+    /* Check flash memory boundaries and alignment with minimal write size */
+    rc  = is_range_valid_APROM(addr + sz);
+    rc |= is_write_aligned(FLASH0_DEV, addr);
+    rc |= is_write_aligned(FLASH0_DEV, sz);
+    if(rc != 0)
+    {
+        return ARM_DRIVER_ERROR_PARAMETER;
+    }
+
+    ret = ARM_Flash_ProgramData_Internal(addr, data, sz);
+    if (ret != ARM_DRIVER_OK)
+    {
+        return ARM_DRIVER_ERROR;
+    }
 
     return cnt;
 }
 
-static int32_t ARM_Flash_EraseChip(void)
+static int32_t ARM_Flash_ProgramData_LDROM(uint32_t addr, const void *data, uint32_t cnt)
 {
-    uint32_t i;
-    uint32_t addr = FLASH0_DEV->memory_base;
-    int32_t rc = ARM_DRIVER_ERROR_UNSUPPORTED;
     int32_t ret;
+    int32_t rc;
+    uint32_t sz;
 
-    /* Check driver capability erase_chip bit */
-    if(DriverCapabilities.erase_chip == 1)
+    sz = cnt * data_width_byte[DriverCapabilities.data_width];
+
+    /* Check flash memory boundaries and alignment with minimal write size */
+    rc  = is_range_valid_LDROM(addr + sz);
+    rc |= is_write_aligned(FLASH1_DEV, addr);
+    rc |= is_write_aligned(FLASH1_DEV, sz);
+    if(rc != 0)
     {
-        for(i = 0; i < FLASH0_DEV->data->sector_count; i++)
-        {
-            ret = NVT_FMC_Erase(addr);
-            if (ret != NVT_FMC_OK)
-            {
-                rc = ARM_DRIVER_ERROR;
-                goto finish;
-            }
-            addr += FLASH0_DEV->data->sector_size;
-        }
+        return ARM_DRIVER_ERROR_PARAMETER;
     }
 
-    rc = ARM_DRIVER_OK;
-finish:
-    return rc;
+    ret = ARM_Flash_ProgramData_Internal(addr, data, sz);
+    if (ret != ARM_DRIVER_OK)
+    {
+        return ARM_DRIVER_ERROR;
+    }
+
+    return cnt;
 }
 
 static ARM_FLASH_STATUS ARM_Flash_GetStatus(void)
@@ -293,9 +421,14 @@ static ARM_FLASH_STATUS ARM_Flash_GetStatus(void)
     return FlashStatus;
 }
 
-static ARM_FLASH_INFO * ARM_Flash_GetInfo(void)
+static ARM_FLASH_INFO * ARM_Flash_GetInfo_APROM(void)
 {
     return FLASH0_DEV->data;
+}
+
+static ARM_FLASH_INFO * ARM_Flash_GetInfo_LDROM(void)
+{
+    return FLASH1_DEV->data;
 }
 
 ARM_DRIVER_FLASH Driver_FLASH0 =
@@ -305,10 +438,25 @@ ARM_DRIVER_FLASH Driver_FLASH0 =
     ARM_Flash_Initialize,
     ARM_Flash_Uninitialize,
     ARM_Flash_PowerControl,
-    ARM_Flash_ReadData,
-    ARM_Flash_ProgramData,
-    ARM_Flash_EraseSector,
-    ARM_Flash_EraseChip,
+    ARM_Flash_ReadData_APROM,
+    ARM_Flash_ProgramData_APROM,
+    ARM_Flash_EraseSector_APROM,
+    NULL,
     ARM_Flash_GetStatus,
-    ARM_Flash_GetInfo
+    ARM_Flash_GetInfo_APROM
+};
+
+ARM_DRIVER_FLASH Driver_FLASH1 =
+{
+    ARM_Flash_GetVersion,
+    ARM_Flash_GetCapabilities,
+    ARM_Flash_Initialize,
+    ARM_Flash_Uninitialize,
+    ARM_Flash_PowerControl,
+    ARM_Flash_ReadData_LDROM,
+    ARM_Flash_ProgramData_LDROM,
+    ARM_Flash_EraseSector_LDROM,
+    NULL,
+    ARM_Flash_GetStatus,
+    ARM_Flash_GetInfo_LDROM
 };
