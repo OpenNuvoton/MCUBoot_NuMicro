@@ -9,7 +9,7 @@ set(MCUBOOT_UPGRADE_STRATEGY        "OVERWRITE_ONLY" CACHE STRING "Upgrade strat
 set(MCUBOOT_SIG_TYPE                "RSA" CACHE STRING "Algorithm to use for signature validation")
 set(MCUBOOT_SIG_LEN                 "3072" CACHE STRING "Algorithm to use for signature validation")
 set(MCUBOOT_ALIGN_VAL               16 CACHE STRING "align option for mcuboot and build image with imgtool [1, 2, 4, 8, 16, 32]")
-set(MCUBOOT_IMAGE_EXEC_RAM_START    0x20008000 CACHE STRING "Start address of predefined RAM-load area that are allowed to be used by executable images")
+set(MCUBOOT_IMAGE_EXEC_RAM_START    0x2000A000 CACHE STRING "Start address of predefined RAM-load area that are allowed to be used by executable images")
 set(MCUBOOT_IMAGE_EXEC_RAM_SIZE     0x8000 CACHE STRING "Size of predefined RAM-load area that are allowed to be used by executable images")
 
 # Specifying a scope of the accepted values of MCUBOOT_UPGRADE_STRATEGY for

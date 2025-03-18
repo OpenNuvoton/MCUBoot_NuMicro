@@ -36,7 +36,7 @@
 #define FLASH_AREA_2_SIZE          (0x8000)
 
 /* Scratch area */
-#define FLASH_AREA_SCRATCH_ID      (FLASH_AREA_2_ID + 1)
+#define FLASH_AREA_SCRATCH_ID      (255)
 #define FLASH_AREA_SCRATCH_OFFSET  (0x100000 + FLASH_AREA_IMAGE_SECTOR_SIZE)
 #define FLASH_AREA_SCRATCH_SIZE    (FLASH_AREA_IMAGE_SECTOR_SIZE)
 
@@ -56,13 +56,17 @@
  * Name is defined in flash driver file: Driver_Flash.c
  */
 
-#define FLASH_DEV_NAME      Driver_FLASH0
+#define FLASH_DEV_NAME          Driver_FLASH0
+#define FLASH_DEV_NAME_LDROM    Driver_FLASH1
 
-#define FLASH_DEV_NAME_0    FLASH_DEV_NAME
-#define FLASH_DEVICE_ID_0   FLASH_DEVICE_ID
+#define FLASH_DEV_NAME_0        FLASH_DEV_NAME
+#define FLASH_DEVICE_ID_0       FLASH_DEVICE_ID
 
-#define FLASH_DEV_NAME_2    FLASH_DEV_NAME
-#define FLASH_DEVICE_ID_2   FLASH_DEVICE_ID
+#define FLASH_DEV_NAME_2        FLASH_DEV_NAME
+#define FLASH_DEVICE_ID_2       FLASH_DEVICE_ID
+
+#define FLASH_DEV_NAME_SCRATCH  FLASH_DEV_NAME_LDROM
+#define FLASH_DEVICE_ID_SCRATCH FLASH_DEVICE_ID
 
 /* Smallest flash programmable unit in bytes */
 #define TFM_HAL_FLASH_PROGRAM_UNIT       (0x8)
