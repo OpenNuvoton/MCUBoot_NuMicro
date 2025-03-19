@@ -12,3 +12,6 @@
 [submodule "bl2/platform/m3331/bsplib/bsp"]
 	path = bl2/platform/m3331/bsplib/bsp
 	url = ssh://hcrdgit4/M3331/bsp
+[submodule "bl2/platform/m55m1/bsplib/bsp"]
+	path = bl2/platform/m55m1/bsplib/bsp
+	url = https://github.com/OpenNuvoton/M55M1BSP.git
