@@ -142,7 +142,7 @@ static int32_t is_range_valid_internal(uint32_t fa_off,
 
 static int32_t is_range_valid_APROM(uint32_t addr)
 {
-    return is_range_valid_internal(0, FLASH0_DEV->data->sector_count, FLASH0_DEV->data->sector_size, addr);
+    return is_range_valid_internal(FMC_APROM_BASE, FLASH0_DEV->data->sector_count, FLASH0_DEV->data->sector_size, addr);
 }
 
 static int32_t is_range_valid_LDROM(uint32_t addr)
@@ -300,7 +300,7 @@ static int32_t ARM_Flash_ReadData_APROM(uint32_t addr, void *data, uint32_t cnt)
     sz = cnt * data_width_byte[DriverCapabilities.data_width];
 
     /* Check flash memory boundaries */
-    rc = is_range_valid_APROM(addr + sz);
+    rc = is_range_valid_APROM(addr + sz - 1);
     if (rc != 0) {
         return ARM_DRIVER_ERROR_PARAMETER;
     }
@@ -324,7 +324,7 @@ static int32_t ARM_Flash_ReadData_LDROM(uint32_t addr, void *data, uint32_t cnt)
     sz = cnt * data_width_byte[DriverCapabilities.data_width];
 
     /* Check flash memory boundaries */
-    rc = is_range_valid_LDROM(addr + sz);
+    rc = is_range_valid_LDROM(addr + sz - 1);
     if (rc != 0) {
         return ARM_DRIVER_ERROR_PARAMETER;
     }
@@ -373,7 +373,7 @@ static int32_t ARM_Flash_ProgramData_APROM(uint32_t addr, const void *data, uint
     sz = cnt * data_width_byte[DriverCapabilities.data_width];
 
     /* Check flash memory boundaries and alignment with minimal write size */
-    rc  = is_range_valid_APROM(addr + sz);
+    rc  = is_range_valid_APROM(addr + sz - 1);
     rc |= is_write_aligned(FLASH0_DEV, addr);
     rc |= is_write_aligned(FLASH0_DEV, sz);
     if(rc != 0)
@@ -399,7 +399,7 @@ static int32_t ARM_Flash_ProgramData_LDROM(uint32_t addr, const void *data, uint
     sz = cnt * data_width_byte[DriverCapabilities.data_width];
 
     /* Check flash memory boundaries and alignment with minimal write size */
-    rc  = is_range_valid_LDROM(addr + sz);
+    rc  = is_range_valid_LDROM(addr + sz - 1);
     rc |= is_write_aligned(FLASH1_DEV, addr);
     rc |= is_write_aligned(FLASH1_DEV, sz);
     if(rc != 0)
