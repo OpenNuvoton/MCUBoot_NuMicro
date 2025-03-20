@@ -252,6 +252,13 @@ static int32_t ARM_Flash_EraseSector_LDROM(uint32_t addr)
     return ARM_DRIVER_OK;
 }
 
+static inline void clean_invalidate_dcacheline(void *ptr) {
+#if defined (__DCACHE_PRESENT) && (__DCACHE_PRESENT == 1U)
+    uint32_t addr = (uint32_t)ptr & ~(__SCB_DCACHE_LINE_SIZE - 1);
+    SCB_CleanInvalidateDCache_by_Addr((volatile void *)addr, __SCB_DCACHE_LINE_SIZE);
+#endif
+}
+
 static int32_t ARM_Flash_ReadData_Internal(uint32_t start_addr, void *data, uint32_t sz)
 {
     uint8_t *dest;
@@ -265,6 +272,7 @@ static int32_t ARM_Flash_ReadData_Internal(uint32_t start_addr, void *data, uint
     remain = sz;
     addr = start_addr;
 
+    //printf("[%s]: Read 0x%x (0x%x bytes)\n", __func__, addr, sz);
     while (remain > 0)
     {
         ret = NVT_FMC_Read(addr, &r_data);
@@ -276,6 +284,7 @@ static int32_t ARM_Flash_ReadData_Internal(uint32_t start_addr, void *data, uint
         if (remain > 4)
         {
             memcpy(dest, &r_data, 4);
+            clean_invalidate_dcacheline(dest);
             dest += 4;
             addr += 4;
             remain -= 4;
@@ -283,6 +292,7 @@ static int32_t ARM_Flash_ReadData_Internal(uint32_t start_addr, void *data, uint
         else
         {
             memcpy(dest, &r_data, remain);
+            clean_invalidate_dcacheline(dest);
             break;
         }
     }
@@ -345,6 +355,8 @@ static int32_t ARM_Flash_ProgramData_Internal(uint32_t addr, const void *data, u
     uint32_t src_offst;
     int32_t ret;
     uint64_t dword;
+
+    // printf("[%s]: Write 0x%x (0x%x bytes)\n", __func__, addr, sz);
 
     src_offst = 0;
     for (dst_offst = 0; dst_offst < sz; dst_offst += sizeof(dword))
