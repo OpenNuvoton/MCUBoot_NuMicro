@@ -69,11 +69,14 @@ __WEAK void boot_platform_quit(struct boot_arm_vector_table *vt)
 
     vt_cpy = vt;
 
+#if defined(__ARM_ARCH_8M_MAIN__) || defined(__ARM_ARCH_8M_BASE__) \
+ || defined(__ARM_ARCH_8_1M_MAIN__)
     /* Restore the Main Stack Pointer Limit register's reset value
      * before passing execution to runtime firmware to make the
      * bootloader transparent to it.
      */
     __set_MSPLIM(0);
+#endif
 
     __set_MSP(vt_cpy->msp);
     __DSB();
