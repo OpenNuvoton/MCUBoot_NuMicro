@@ -47,7 +47,7 @@ pyocd load -t m487jidae build/bin/bl2.bin
 
 The bootloader behavior can be customized using CMake variables, passed directly via the command line during CMake configuration.
 
-Enable more logging message:
+Enable more verbose logging:
 ```
 -DMCUBOOT_LOG_LEVEL=DEBUG
 ```
@@ -59,7 +59,7 @@ Change upgrade strategies:
 
 Check available configuration options in [mcuboot_default_config.cmake](https://github.com/OpenNuvoton/MCUBoot_NuMicro/blob/master/bl2/ext/mcuboot/mcuboot_default_config.cmake).
 
-### Supported Platform
+## Supported Platform
 
 | Device | Core  |
 | --- | --- |
@@ -68,3 +68,15 @@ Check available configuration options in [mcuboot_default_config.cmake](https://
 | M55M1 | Cortex-M55 |
 | M261 | Cortex-M23 |
 | M460 | Cortex-M4 |
+
+## Using CMake Tools (a VS Code extension)
+
+CMake Tools provides a convenient interface for working with CMake-based project in VS Code.
+If you're unsure how to get started,
+the JSON files in [.vscode](https://github.com/OpenNuvoton/MCUBoot_NuMicro/tree/master/.vscode) folder offer a starting point.
+For more details, see the [CMake Tools documentation](https://github.com/microsoft/vscode-cmake-tools/blob/main/docs/README.md)
+```
+cd .vscode
+cp cmake-kits.json.sample cmake-kits.json
+cp settings.json.sample settings.json
+```
