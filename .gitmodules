@@ -24,3 +24,6 @@
 [submodule "bl2/platform/m460/bsplib/bsp"]
 	path = bl2/platform/m460/bsplib/bsp
 	url = https://github.com/OpenNuvoton/m460bsp.git
+[submodule "bl2/platform/m2l31/bsplib/bsp"]
+	path = bl2/platform/m2l31/bsplib/bsp
+	url = https://github.com/OpenNuvoton/M2L31BSP.git
