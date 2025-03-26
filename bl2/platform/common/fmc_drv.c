@@ -1,13 +1,35 @@
-#include "fmc_drv.h"
+#include "nvmc_drv.h"
 #include <string.h>
 
-int32_t NVT_FMC_Read(uint32_t addr, uint32_t *data)
+static int32_t NVT_FMC_Init(void);
+static int32_t NVT_FMC_Read(uint32_t addr, uint32_t *data);
+static int32_t NVT_FMC_Program(uint32_t addr, volatile uint64_t dword);
+static int32_t NVT_FMC_Erase(uint32_t addr);
+
+NVT_NVMC_T NVT_FMC = 
+{
+    .init = NVT_FMC_Init,
+    .read = NVT_FMC_Read,
+    .program = NVT_FMC_Program,
+    .erase = NVT_FMC_Erase,
+};
+
+static int32_t NVT_FMC_Init(void)
+{
+    FMC_Open();
+    FMC_ENABLE_AP_UPDATE();
+    FMC_ENABLE_LD_UPDATE();
+
+    return NVT_NVMC_OK;
+}
+
+static int32_t NVT_FMC_Read(uint32_t addr, uint32_t *data)
 {
     int32_t timeout_cnt;
 
     if (data == NULL)
     {
-        return NVT_FMC_PARAMETER;
+        return NVT_NVMC_PARAMETER;
     }
 
     FMC->ISPCMD = FMC_ISPCMD_READ;
@@ -20,22 +42,22 @@ int32_t NVT_FMC_Read(uint32_t addr, uint32_t *data)
     {
         if(timeout_cnt-- <= 0)
         {
-            return NVT_FMC_TIMEOUT;
+            return NVT_NVMC_TIMEOUT;
         }
     }
 
     if(FMC->ISPSTS & FMC_ISPSTS_ISPFF_Msk)
     {
         FMC->ISPSTS |= FMC_ISPSTS_ISPFF_Msk;
-        return NVT_FMC_ISPFF;
+        return NVT_NVMC_ISPFF;
     }
 
     *data = FMC->ISPDAT;
 
-    return NVT_FMC_OK;
+    return NVT_NVMC_OK;
 }
 
-int32_t NVT_FMC_Program(uint32_t addr, volatile uint64_t dword)
+static int32_t NVT_FMC_Program(uint32_t addr, volatile uint64_t dword)
 {
     int32_t timeout_cnt;
     uint8_t *src = (uint8_t *)dword;
@@ -56,20 +78,20 @@ int32_t NVT_FMC_Program(uint32_t addr, volatile uint64_t dword)
     {
         if(timeout_cnt-- <= 0)
         {
-            return NVT_FMC_TIMEOUT;
+            return NVT_NVMC_TIMEOUT;
         }
     }
 
     if(FMC->ISPSTS & FMC_ISPSTS_ISPFF_Msk)
     {
         FMC->ISPSTS |= FMC_ISPSTS_ISPFF_Msk;
-        return NVT_FMC_ISPFF;
+        return NVT_NVMC_ISPFF;
     }
 
-    return NVT_FMC_OK;
+    return NVT_NVMC_OK;
 }
 
-int32_t NVT_FMC_Erase(uint32_t addr)
+static int32_t NVT_FMC_Erase(uint32_t addr)
 {
     int32_t timeout_cnt;
 
@@ -83,15 +105,35 @@ int32_t NVT_FMC_Erase(uint32_t addr)
     {
         if(timeout_cnt-- <= 0)
         {
-            return NVT_FMC_TIMEOUT;
+            return NVT_NVMC_TIMEOUT;
         }
     }
 
     if(FMC->ISPSTS & FMC_ISPSTS_ISPFF_Msk)
     {
         FMC->ISPSTS |= FMC_ISPSTS_ISPFF_Msk;
-        return NVT_FMC_ISPFF;
+        return NVT_NVMC_ISPFF;
     }
 
-    return NVT_FMC_OK;
+    return NVT_NVMC_OK;
+}
+
+int32_t NVT_NVMC_Init(void)
+{
+    return NVT_FMC.init();
+}
+
+int32_t NVT_NVMC_Read(uint32_t addr, uint32_t *data)
+{
+    return NVT_FMC.read(addr, data);
+}
+
+int32_t NVT_NVMC_Program(uint32_t addr, uint64_t dword)
+{
+    return NVT_FMC.program(addr, dword);
+}
+
+int32_t NVT_NVMC_Erase(uint32_t addr)
+{
+    return NVT_FMC.erase(addr);
 }

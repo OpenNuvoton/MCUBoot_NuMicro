@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include "Driver_Flash.h"
 #include "NuMicro.h"
-#include "fmc_drv.h"
+#include "nvmc_drv.h"
 #include "flash_layout.h"
 #include "region_defs.h"
 
@@ -86,17 +86,17 @@ static int32_t is_sector_aligned(struct arm_flash_dev_t *flash_dev,
 static ARM_FLASH_INFO ARM_FLASH0_DEV_DATA =
 {
     .sector_info = NULL,
-    .sector_count = FMC_APROM_SIZE / FMC_FLASH_PAGE_SIZE,
-    .sector_size  = FMC_FLASH_PAGE_SIZE,
-    .page_size    = FMC_FLASH_PAGE_SIZE,
-    .program_unit = 8,
+    .sector_count = NVT_NVMC_APROM_SECTOR_COUNT,
+    .sector_size  = NVT_NVMC_SECTOR_SIZE,
+    .page_size    = NVT_NVMC_SECTOR_SIZE,
+    .program_unit = NVT_NVMC_PROGRAM_UNIT,
     .erased_value = 0xFF
 };
 
 static struct arm_flash_dev_t ARM_FLASH0_DEV =
 {
-    .memory_base = 0,
-    .data        = &(ARM_FLASH0_DEV_DATA)
+    .memory_base = NVT_NVMC_APROM_MEMORY_BASE,
+    .data        = &ARM_FLASH0_DEV_DATA
 };
 
 struct arm_flash_dev_t *FLASH0_DEV = &ARM_FLASH0_DEV;
@@ -104,17 +104,17 @@ struct arm_flash_dev_t *FLASH0_DEV = &ARM_FLASH0_DEV;
 static ARM_FLASH_INFO ARM_FLASH1_DEV_DATA =
 {
     .sector_info = NULL,
-    .sector_count = FMC_LDROM_SIZE / FMC_FLASH_PAGE_SIZE,
-    .sector_size  = FMC_FLASH_PAGE_SIZE,
-    .page_size    = FMC_FLASH_PAGE_SIZE,
-    .program_unit = 8,
+    .sector_count = NVT_NVMC_LDROM_SECTOR_COUNT,
+    .sector_size  = NVT_NVMC_SECTOR_SIZE,
+    .page_size    = NVT_NVMC_SECTOR_SIZE,
+    .program_unit = NVT_NVMC_PROGRAM_UNIT,
     .erased_value = 0xFF
 };
 
 static struct arm_flash_dev_t ARM_FLASH1_DEV =
 {
-    .memory_base = 0,
-    .data        = &(ARM_FLASH1_DEV_DATA)
+    .memory_base = NVT_NVMC_LDROM_MEMORY_BASE,
+    .data        = &ARM_FLASH1_DEV_DATA
 };
 
 struct arm_flash_dev_t *FLASH1_DEV = &ARM_FLASH1_DEV;
@@ -123,17 +123,15 @@ struct arm_flash_dev_t *FLASH1_DEV = &ARM_FLASH1_DEV;
  * Functions
  */
 
-static int32_t is_range_valid_internal(uint32_t fa_off,
-                               uint32_t sector_count,
-                               uint32_t sector_size,
-                               uint32_t addr)
+static int32_t is_range_valid_internal(struct arm_flash_dev_t *dev,
+                                       uint32_t addr)
 {
     uint32_t flash_size = 0;
     int32_t rc = 0;
 
-    flash_size = (sector_count * sector_size);
+    flash_size = (dev->data->sector_count * dev->data->sector_size);
 
-    if((addr - fa_off) >= flash_size)
+    if((addr - dev->memory_base) >= flash_size)
     {
         rc = -1;
     }
@@ -142,12 +140,12 @@ static int32_t is_range_valid_internal(uint32_t fa_off,
 
 static int32_t is_range_valid_APROM(uint32_t addr)
 {
-    return is_range_valid_internal(FMC_APROM_BASE, FLASH0_DEV->data->sector_count, FLASH0_DEV->data->sector_size, addr);
+    return is_range_valid_internal(FLASH0_DEV, addr);
 }
 
 static int32_t is_range_valid_LDROM(uint32_t addr)
 {
-    return is_range_valid_internal(FMC_LDROM_BASE, FLASH1_DEV->data->sector_count, FLASH1_DEV->data->sector_size, addr);
+    return is_range_valid_internal(FLASH1_DEV, addr);
 }
 
 static ARM_DRIVER_VERSION ARM_Flash_GetVersion(void)
@@ -168,9 +166,7 @@ static int32_t ARM_Flash_Initialize(ARM_Flash_SignalEvent_t cb_event)
         return ARM_DRIVER_ERROR;
     }
 
-    FMC_Open();
-    FMC_ENABLE_AP_UPDATE();
-    FMC_ENABLE_LD_UPDATE();
+    NVT_NVMC_Init();
 
     return ARM_DRIVER_OK;
 }
@@ -201,8 +197,8 @@ static int32_t ARM_Flash_EraseSector_Internal(uint32_t addr)
 {
     int32_t ret;
 
-    ret = NVT_FMC_Erase(addr);
-    if (ret != NVT_FMC_OK)
+    ret = NVT_NVMC_Erase(addr);
+    if (ret != NVT_NVMC_OK)
     {
         return ARM_DRIVER_ERROR;
     }
@@ -275,8 +271,8 @@ static int32_t ARM_Flash_ReadData_Internal(uint32_t start_addr, void *data, uint
     //printf("[%s]: Read 0x%x (0x%x bytes)\n", __func__, addr, sz);
     while (remain > 0)
     {
-        ret = NVT_FMC_Read(addr, &r_data);
-        if (ret != NVT_FMC_OK)
+        ret = NVT_NVMC_Read(addr, &r_data);
+        if (ret != NVT_NVMC_OK)
         {
             return ARM_DRIVER_ERROR;
         }
@@ -348,7 +344,7 @@ static int32_t ARM_Flash_ReadData_LDROM(uint32_t addr, void *data, uint32_t cnt)
     return cnt;
 }
 
-static int32_t ARM_Flash_ProgramData_Internal(uint32_t addr, const void *data, uint32_t sz)
+static int32_t ARM_Flash_ProgramData_Internal(uint32_t addr, const void *data, uint32_t sz, uint32_t prog_unit)
 {
     int32_t rc = 0;
     uint32_t dst_offst;
@@ -359,18 +355,18 @@ static int32_t ARM_Flash_ProgramData_Internal(uint32_t addr, const void *data, u
     // printf("[%s]: Write 0x%x (0x%x bytes)\n", __func__, addr, sz);
 
     src_offst = 0;
-    for (dst_offst = 0; dst_offst < sz; dst_offst += sizeof(dword))
+    for (dst_offst = 0; dst_offst < sz; dst_offst += prog_unit)
     {
         /* Create local copy to avoid unaligned access */
-        memcpy(&dword, data + src_offst, sizeof(dword));
+        memcpy(&dword, data + src_offst, prog_unit);
 
-        ret = NVT_FMC_Program(addr + dst_offst, dword);
-        if (ret != 0)
+        ret = NVT_NVMC_Program(addr + dst_offst, dword);
+        if (ret != NVT_NVMC_OK)
         {
             return ARM_DRIVER_ERROR;
         }
 
-        src_offst += sizeof(dword);
+        src_offst += prog_unit;
     }
 
     return ARM_DRIVER_OK;
@@ -393,7 +389,7 @@ static int32_t ARM_Flash_ProgramData_APROM(uint32_t addr, const void *data, uint
         return ARM_DRIVER_ERROR_PARAMETER;
     }
 
-    ret = ARM_Flash_ProgramData_Internal(addr, data, sz);
+    ret = ARM_Flash_ProgramData_Internal(addr, data, sz, FLASH0_DEV->data->program_unit);
     if (ret != ARM_DRIVER_OK)
     {
         return ARM_DRIVER_ERROR;
@@ -419,7 +415,7 @@ static int32_t ARM_Flash_ProgramData_LDROM(uint32_t addr, const void *data, uint
         return ARM_DRIVER_ERROR_PARAMETER;
     }
 
-    ret = ARM_Flash_ProgramData_Internal(addr, data, sz);
+    ret = ARM_Flash_ProgramData_Internal(addr, data, sz, FLASH1_DEV->data->program_unit);
     if (ret != ARM_DRIVER_OK)
     {
         return ARM_DRIVER_ERROR;

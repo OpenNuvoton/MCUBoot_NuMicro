@@ -18,14 +18,21 @@ target_include_directories(platform_common_interface
 # target_include_directories(platform_bl2_lib
 #     PUBLIC
 # )
+if (PLATFORM_NAME STREQUAL "m2l31")
+set (NVMC_TYPE_RMC 1)
+set (NVMC_DRV_SRC "common/rmc_drv.c")
+else ()
+set (NVMC_TYPE_RMC 0)
+set (NVMC_DRV_SRC "common/fmc_drv.c")
+endif ()
 
 target_sources(platform_bl2_lib
     PRIVATE
         common/Driver_Flash.c
-        common/fmc_drv.c
         common/uart_stdout.c
         common/exit.c
         common/boot.c
+        ${NVMC_DRV_SRC}
 )
 
 target_link_libraries(platform_bl2_lib
@@ -38,6 +45,7 @@ target_compile_definitions(platform_bl2_lib
     PUBLIC
         MCUBOOT_${MCUBOOT_UPGRADE_STRATEGY}
         $<$<BOOL:${MCUBOOT_HW_KEY}>:MCUBOOT_HW_KEY>
+        $<$<BOOL:${NVMC_TYPE_RMC}>:NVMC_TYPE_RMC=${NVMC_TYPE_RMC}>
 )
 
 ######################### Platform Region Defs #################################
