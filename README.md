@@ -69,6 +69,7 @@ Check available configuration options in [mcuboot_default_config.cmake](https://
 | M261 | Cortex-M23 |
 | M460 | Cortex-M4 |
 | M2L31 | Cortex-M23 |
+| M2351 | Cortex-M23 |
 
 ## Using CMake Tools (a VS Code extension)
 
