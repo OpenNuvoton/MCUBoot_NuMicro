@@ -71,6 +71,10 @@ Check available configuration options in [mcuboot_default_config.cmake](https://
 | M2L31 | Cortex-M23 |
 | M2351 | Cortex-M23 |
 
+## MCUBoot-Compatible Firmware
+
+To work with MCUBoot, the repository [MCUBoot-Compatible-Template](https://github.com/OpenNuvoton/MCUBoot-Compatible-Template) provides template firmware code for validating MCUBoot firmware upgrade strategies. Users can reference the template and customize the provided code according to their needs. By programming the images to the flash address of primary and secondary slot, MCUBoot will jump to the correct image based on the chosen strategy.
+
 ## Using CMake Tools (a VS Code extension)
 
 CMake Tools provides a convenient interface for working with CMake-based project in VS Code.
