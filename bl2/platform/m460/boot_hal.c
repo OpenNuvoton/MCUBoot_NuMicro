@@ -7,6 +7,10 @@
 extern ARM_DRIVER_FLASH FLASH_DEV_NAME;
 #endif /* FLASH_DEV_NAME */
 
+#if FLASH_DEVICE_ID_2 != FLASH_DEVICE_ID
+extern ARM_DRIVER_FLASH FLASH_DEV_NAME_2;
+#endif /* FLASH_DEV_NAME */
+
 /* bootloader platform-specific hw initialization */
 int32_t boot_platform_init(void)
 {
@@ -39,6 +43,13 @@ int32_t boot_platform_init(void)
         return 1;
     }
 #endif /* FLASH_DEV_NAME */
+
+#if FLASH_DEVICE_ID_2 != FLASH_DEVICE_ID
+    result = FLASH_DEV_NAME_2.Initialize(NULL);
+    if (result != ARM_DRIVER_OK) {
+        return 1;
+    }
+#endif /* FLASH_DEV_NAME_2 */
 
     return 0;
 }

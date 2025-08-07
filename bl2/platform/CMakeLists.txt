@@ -26,6 +26,13 @@ set (NVMC_TYPE_RMC 0)
 set (NVMC_DRV_SRC "common/fmc_drv.c")
 endif ()
 
+if (SECONDARY_SLOT_IN_SPI_FLASH EQUAL 1)
+if (PLATFORM_NAME STREQUAL "m460")
+set (SPI_FLASH_M460 1)
+endif ()
+target_sources(platform_bl2_lib PRIVATE common/spi_drv.c)
+endif()
+
 target_sources(platform_bl2_lib
     PRIVATE
         common/Driver_Flash.c
@@ -46,6 +53,7 @@ target_compile_definitions(platform_bl2_lib
         MCUBOOT_${MCUBOOT_UPGRADE_STRATEGY}
         $<$<BOOL:${MCUBOOT_HW_KEY}>:MCUBOOT_HW_KEY>
         $<$<BOOL:${NVMC_TYPE_RMC}>:NVMC_TYPE_RMC=${NVMC_TYPE_RMC}>
+        $<$<BOOL:${SPI_FLASH_M460}>:SPI_FLASH_M460=${SPI_FLASH_M460}>
 )
 
 ######################### Platform Region Defs #################################
@@ -59,4 +67,5 @@ target_compile_definitions(platform_region_defs
         $<$<STREQUAL:${MCUBOOT_SIG_TYPE},EC>:MCUBOOT_SIGN_EC${MCUBOOT_SIG_LEN}>
         $<$<STREQUAL:${MCUBOOT_UPGRADE_STRATEGY},RAM_LOAD>:IMAGE_EXECUTABLE_RAM_START=${MCUBOOT_IMAGE_EXEC_RAM_START}>
         $<$<STREQUAL:${MCUBOOT_UPGRADE_STRATEGY},RAM_LOAD>:IMAGE_EXECUTABLE_RAM_SIZE=${MCUBOOT_IMAGE_EXEC_RAM_SIZE}>
+        $<$<BOOL:${SECONDARY_SLOT_IN_SPI_FLASH}>:SECONDARY_SLOT_IN_SPI_FLASH=${SECONDARY_SLOT_IN_SPI_FLASH}>
 )

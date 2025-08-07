@@ -30,10 +30,15 @@
 #define FLASH_AREA_0_OFFSET        (0x20000)
 #define FLASH_AREA_0_SIZE          (0x8000)
 
-/* Secondary slot is in embedded flash */
 #define FLASH_AREA_2_ID            (FLASH_AREA_0_ID + 1)
+#ifdef SECONDARY_SLOT_IN_SPI_FLASH
+#define FLASH_AREA_2_OFFSET        (0x100000)
+#define FLASH_AREA_2_SIZE          (0x8000)
+#else
+/* Secondary slot is in embedded flash */
 #define FLASH_AREA_2_OFFSET        (0xA0000)
 #define FLASH_AREA_2_SIZE          (0x8000)
+#endif
 
 /* Scratch area */
 #define FLASH_AREA_SCRATCH_ID      (255)
@@ -62,8 +67,13 @@
 #define FLASH_DEV_NAME_0        FLASH_DEV_NAME
 #define FLASH_DEVICE_ID_0       FLASH_DEVICE_ID
 
+#ifdef SECONDARY_SLOT_IN_SPI_FLASH
+#define FLASH_DEV_NAME_2        Driver_FLASH2
+#define FLASH_DEVICE_ID_2       101
+#else
 #define FLASH_DEV_NAME_2        FLASH_DEV_NAME
 #define FLASH_DEVICE_ID_2       FLASH_DEVICE_ID
+#endif
 
 #define FLASH_DEV_NAME_SCRATCH  FLASH_DEV_NAME_LDROM
 #define FLASH_DEVICE_ID_SCRATCH FLASH_DEVICE_ID

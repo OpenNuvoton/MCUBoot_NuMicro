@@ -16,6 +16,7 @@ target_sources(bsp_lib
         bsp/Library/StdDriver/src/clk.c
         bsp/Library/StdDriver/src/sys.c
         bsp/Library/StdDriver/src/fmc.c
+        $<$<BOOL:${SECONDARY_SLOT_IN_SPI_FLASH}>:bsp/Library/StdDriver/src/spim.c>
 )
 
 set_source_files_properties(bsp/Library/Device/Nuvoton/m460/Source/ARM/startup_m460.s
