@@ -506,6 +506,7 @@ const struct bootutil_key bootutil_keys[] = {
     },
 #endif /* MCUBOOT_IMAGE_NUMBER > 3 */
 };
+const int bootutil_key_cnt = MCUBOOT_IMAGE_NUMBER;
 #endif /* MCUBOOT_SIGN_RSA */
 #endif /* HAVE_KEYS */
 
