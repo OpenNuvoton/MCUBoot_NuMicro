@@ -12,35 +12,71 @@ MCUboot is a secure bootloader for 32-bits microcontrollers.
 ### Requirements
 
 * NuMicro microcontroller ([Supported Platform](#supported-platform))
-* Toolchain: `CMake`, `Ninja` and `Arm Compiler 6`
+* Toolchain: `CMake`, `Ninja` and `Arm Compiler 6` / `GCC`
 * Flashing Tool: `PyOCD`
 
 ### Cloning the Repository
 
-Make sure to include submodules when cloning:
+Cloning all submodules recursively may impact performance and consume significant disk space. It is recommended to selectively clone only the submodules needed.
+1. Cloning necessary submodules
 ```
-git clone https://github.com/OpenNuvoton/MCUBoot_NuMicro.git --recurse-submodules
+git submodule update --init -- lib/ext/mcubootlib/mcuboot
+git submodule update --init -- lib/ext/mbedtlslib/mbedtls
+```
+2. Clone the corresponding BSP based on your board model. For example, with M460:
+```
+git submodule update --init -- bl2/platform/m460/bsplib/bsp
+```
+
+### Configuration
+
+It is recommended to use CMake Presets to handle CMake configuration. Using M460 as an example:
+
+```
+mkdir build
+cp CMakeUserPresets.json.sample CMakeUserPresets.json
+cmake --preset default .
+```
+
+#### Example
+
+For example, to configure M55M1 with:
+
+* ARM Compiler
+* Build type: RELWITHDEBINFO
+* EC-P256 image signature verification
+
+Add a new section in CMakeUserPresets.json:
+```
+{
+    "name": "m55-relwithdbg",
+    "inherits": "common",
+    "cacheVariables": {
+        "CMAKE_BUILD_TYPE":"RELWITHDEBINFO",
+        "CMAKE_TOOLCHAIN_FILE": "toolchain/armclang.cmake",
+        "CMAKE_SYSTEM_PROCESSOR": "cortex-m55",
+        "PLATFORM_NAME": "m55m1",
+        "MCUBOOT_SIG_TYPE": "EC",
+        "MCUBOOT_SIG_LEN": "256"
+    }
+}
+```
+
+And make sure you specify the correct preset during configuration:
+```
+cmake --preset m55-relwithdbg .
 ```
 
 ### Build
 
-The following commands demonstrate how to build for the M480 series.
-Replace `m480` and `cortex-m4` to match your target.
 ```
-mkdir build
-cd build
-cmake -G Ninja \
-  -DCMAKE_SYSTEM_PROCESSOR=cortex-m4 \
-  -DPLATFORM_NAME=m480 \
-  --toolchain ../toolchain/armclang.cmake \
-  -S ..
-cmake --build .
+cmake --build build/
 ```
 
 ### Installation
 
 ```
-pyocd load -t m487jidae build/bin/bl2.bin
+pyocd load -t m467hjhae build/bin/bl2.bin
 ```
 
 ### Customization
@@ -78,11 +114,4 @@ To work with MCUBoot, the repository [MCUBoot-Compatible-Template](https://githu
 ## Using CMake Tools (a VS Code extension)
 
 CMake Tools provides a convenient interface for working with CMake-based project in VS Code.
-If you're unsure how to get started,
-the JSON files in [.vscode](https://github.com/OpenNuvoton/MCUBoot_NuMicro/tree/master/.vscode) folder offer a starting point.
 For more details, see the [CMake Tools documentation](https://github.com/microsoft/vscode-cmake-tools/blob/main/docs/README.md)
-```
-cd .vscode
-cp cmake-kits.json.sample cmake-kits.json
-cp settings.json.sample settings.json
-```
