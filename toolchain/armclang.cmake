@@ -22,3 +22,4 @@ set_property(GLOBAL PROPERTY ELF2BIN ${ARM_ELF2BIN})
 # flag.
 set(CMAKE_C_COMPILER_TARGET arm-arm-none-eabi)
 set(CMAKE_CXX_COMPILER_TARGET arm-arm-none-eabi)
+set(CMAKE_ASM_COMPILER_TARGET arm-arm-none-eabi)
