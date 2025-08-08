@@ -37,7 +37,7 @@ target_sources(platform_bl2_lib
     PRIVATE
         common/Driver_Flash.c
         common/uart_stdout.c
-        common/exit.c
+        common/syscall.c
         common/boot.c
         ${NVMC_DRV_SRC}
 )

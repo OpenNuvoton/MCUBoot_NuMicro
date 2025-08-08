@@ -9,7 +9,6 @@ target_include_directories(bsp_lib
 
 target_sources(bsp_lib
     PRIVATE
-        bsp/Library/Device/Nuvoton/m460/Source/ARM/startup_m460.s
         bsp/Library/Device/Nuvoton/m460/Source/system_m460.c
         bsp/Library/StdDriver/src/retarget.c
         bsp/Library/StdDriver/src/uart.c
@@ -19,10 +18,25 @@ target_sources(bsp_lib
         $<$<BOOL:${SECONDARY_SLOT_IN_SPI_FLASH}>:bsp/Library/StdDriver/src/spim.c>
 )
 
-set_source_files_properties(bsp/Library/Device/Nuvoton/m460/Source/ARM/startup_m460.s
-    PROPERTIES
-        COMPILE_FLAGS "-DStack_Size=0x4000"
+if (CMAKE_C_COMPILER_ID STREQUAL "ARMClang")
+target_sources(bsp_lib
+    PRIVATE
+        bsp/Library/Device/Nuvoton/m460/Source/ARM/startup_m460.s
 )
+target_compile_options(bsp_lib
+    PRIVATE
+        $<$<COMPILE_LANGUAGE:ASM>:-DStack_Size=0x4000>
+)
+elseif (CMAKE_C_COMPILER_ID STREQUAL "GNU")
+target_sources(bsp_lib
+    PRIVATE
+        bsp/Library/Device/Nuvoton/m460/Source/GCC/startup_m460.S
+)
+target_compile_options(bsp_lib
+    PRIVATE
+        $<$<COMPILE_LANGUAGE:ASM>:-D__STACK_SIZE=0x4000>
+)
+endif()
 
 target_compile_definitions(bsp_lib
     PUBLIC

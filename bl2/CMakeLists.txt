@@ -16,6 +16,12 @@ target_link_libraries(bl2
         platform_bl2_lib
 )
 
+target_compile_definitions(bl2
+    PRIVATE
+        $<$<BOOL:${DEFAULT_MCUBOOT_FLASH_MAP}>:DEFAULT_MCUBOOT_FLASH_MAP>
+)
+
+if (CMAKE_C_COMPILER_ID STREQUAL "ARMClang")
 target_link_options(bl2
     PRIVATE
         --library_type=microlib
@@ -25,14 +31,22 @@ target_link_options(bl2
         --scatter=${CMAKE_CURRENT_SOURCE_DIR}/platform/${PLATFORM_NAME}/scatter/${PLATFORM_NAME}.sct
 )
 
-target_compile_definitions(bl2
-    PRIVATE
-        $<$<BOOL:${DEFAULT_MCUBOOT_FLASH_MAP}>:DEFAULT_MCUBOOT_FLASH_MAP>
-)
-
 add_custom_command(TARGET bl2
         POST_BUILD
         COMMAND ${ARM_ELF2BIN} --bin ${EXECUTABLE_OUTPUT_PATH}/bl2.elf --output ${EXECUTABLE_OUTPUT_PATH}/bl2.bin)
+elseif(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+target_link_options(bl2
+    PRIVATE
+        -Wl,-Map=${EXECUTABLE_OUTPUT_PATH}/bl2.map
+        -T${CMAKE_CURRENT_SOURCE_DIR}/platform/${PLATFORM_NAME}/scatter/${PLATFORM_NAME}.ld
+        -lc
+        -Wl,--print-memory-usage
+)
+
+add_custom_command(TARGET bl2
+                   POST_BUILD
+                   COMMAND ${GCC_ELF2BIN} -O binary ${EXECUTABLE_OUTPUT_PATH}/bl2 ${EXECUTABLE_OUTPUT_PATH}/bl2.bin)
+endif()
 
 ######################### MBEDTLS ##############################################
 

@@ -5,16 +5,26 @@
 extern ARM_DRIVER_FLASH FLASH_DEV_NAME;
 #endif /* FLASH_DEV_NAME */
 
+#if defined(__ARMCC_VERSION)
 extern uint32_t Image$$RW_RAM$$Base[];
 extern uint32_t Image$$RW_RAM$$ZI$$Limit[];
+#else
+extern uint32_t __data_start__[];
+extern uint32_t __StackTop[];
+#endif
 
 __WEAK __attribute__((naked)) void boot_clear_ram_area(void)
 {
     __ASM volatile(
         ".syntax unified                             \n"
         "movs    r0, #0                              \n"
+#if defined(__ARMCC_VERSION)
         "ldr     r1, =Image$$RW_RAM$$Base            \n"
         "ldr     r2, =Image$$RW_RAM$$ZI$$Limit       \n"
+#else
+        "ldr     r1, =__data_start__                 \n"
+        "ldr     r2, =__StackTop                     \n"
+#endif
         "subs    r2, r2, r1                          \n"
         "Loop:                                       \n"
         "subs    r2, #4                              \n"
