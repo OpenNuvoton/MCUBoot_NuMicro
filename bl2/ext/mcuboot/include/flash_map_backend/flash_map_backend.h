@@ -64,17 +64,15 @@ int flash_area_read_is_empty(const struct flash_area *fa, uint32_t off,
 static inline int flash_area_get_sector(const struct flash_area* fap, uint32_t off,
     struct flash_sector* sector)
 {
-    uint32_t fs_off;
     uint32_t page_size;
 
-    /* The offset is out of area reange */
-    if(off >= fap->fa_off + fap->fa_size)
+    /* The offset is out of area range */
+    if(off >= fap->fa_size)
         return -1;
 
-    fs_off = fap->fa_off + off;
     page_size = DRV_FLASH_AREA(fap)->GetInfo()->page_size;
 
-    sector->fs_off = (fs_off / page_size) * page_size;
+    sector->fs_off = (off / page_size) * page_size;
     sector->fs_size = page_size;
 
     return 0;
