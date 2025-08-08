@@ -1,4 +1,2 @@
 /build
-/.vscode/*
-!/.vscode/cmake-kits.json.sample
-!/.vscode/settings.json.sample
+/CMakeUserPresets.json
