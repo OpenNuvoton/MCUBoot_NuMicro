@@ -31,14 +31,21 @@
 #define FLASH_AREA_0_SIZE          (0x8000)
 
 #define FLASH_AREA_2_ID            (FLASH_AREA_0_ID + 1)
+
+/* Secondary slot is in SPI flash */
 #ifdef SECONDARY_SLOT_IN_SPI_FLASH
+/* using SPIM */
+#ifdef USE_SPIM
 #define FLASH_AREA_2_OFFSET        (0x100000)
-#define FLASH_AREA_2_SIZE          (0x8000)
+#else
+/* using SPI */
+#define FLASH_AREA_2_OFFSET        (0x800000)
+#endif
 #else
 /* Secondary slot is in embedded flash */
 #define FLASH_AREA_2_OFFSET        (0xA0000)
-#define FLASH_AREA_2_SIZE          (0x8000)
 #endif
+#define FLASH_AREA_2_SIZE          (0x8000)
 
 /* Scratch area */
 #define FLASH_AREA_SCRATCH_ID      (255)

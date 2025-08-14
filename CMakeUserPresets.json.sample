@@ -9,7 +9,7 @@
                 "CMAKE_TOOLCHAIN_FILE": "toolchain/arm-none-eabi-gcc.cmake",
                 "CMAKE_SYSTEM_PROCESSOR": "cortex-m4",
                 "PLATFORM_NAME": "m460",
-                "SECONDARY_SLOT_IN_SPI_FLASH": "1",
+                "SECONDARY_SLOT_IN_SPI_FLASH": "ON",
                 "MCUBOOT_SIG_TYPE": "EC",
                 "MCUBOOT_SIG_LEN": "256"
             }

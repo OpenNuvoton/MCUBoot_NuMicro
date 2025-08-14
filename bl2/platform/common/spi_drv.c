@@ -1,327 +1,258 @@
-#include "nvspi_drv.h"
 #include "NuMicro.h"
+#include "nvspi_drv.h"
 
-static void NVT_SPIM_IO_Write(uint8_t u8Data)
+__STATIC_INLINE void wait_SPI_IS_BUSY(SPI_T *spi)
 {
-    SPIM->TX[0] = u8Data;
+    uint32_t u32TimeOutCnt = SystemCoreClock; /* 1 second time-out */
 
-    SPIM_SET_GO();
-
-    SPIM_WAIT_FREE();
+    while(SPI_IS_BUSY(spi))
+    {
+        if(--u32TimeOutCnt == 0)
+        {
+            printf("Wait for SPI time-out!\n");
+            break;
+        }
+    }
 }
 
-static uint8_t NVT_SPIM_IO_Read(void)
+static uint8_t SpiFlash_ReadStatusReg(void)
 {
-    SPIM_SET_GO();
+    // /CS: active
+    SPI_SET_SS_LOW(SPI_FLASH_PORT);
 
-    SPIM_WAIT_FREE();
+    // send Command: 0x05, Read status register
+    SPI_WRITE_TX(SPI_FLASH_PORT, 0x05);
 
-    return (SPIM->RX[0] & 0xFF);
+    // read status
+    SPI_WRITE_TX(SPI_FLASH_PORT, 0x00);
+
+    // wait tx finish
+    wait_SPI_IS_BUSY(SPI_FLASH_PORT);
+
+    // /CS: de-active
+    SPI_SET_SS_HIGH(SPI_FLASH_PORT);
+
+    // skip first rx data
+    SPI_READ_RX(SPI_FLASH_PORT);
+
+    return (SPI_READ_RX(SPI_FLASH_PORT) & 0xff);
 }
 
-static uint32_t SPIFLASH_ReadID(void)
+int32_t NVT_NVSPI_WaitReady(void)
 {
-    uint8_t u8ID0, u8ID1, u8ID2;
-
-    SPIM_SET_SS_EN(1);                          // CS is   active (Low)
-
-    SPIM->CTL0 = (SPIM->CTL0 & ~(SPIM_CTL0_OPMODE_Msk | SPIM_CTL0_QDIODIR_Msk)) | ((SPIM_CTL0_OPMODE_IO) | (1 << SPIM_CTL0_QDIODIR_Pos));
-
-    NVT_SPIM_IO_Write(OPCODE_RDID);                 // Send Read ID instruction
-
-    SPIM->CTL0 = (SPIM->CTL0 & ~(SPIM_CTL0_OPMODE_Msk | SPIM_CTL0_QDIODIR_Msk)) | ((SPIM_CTL0_OPMODE_IO) | (0 << SPIM_CTL0_QDIODIR_Pos));
-
-    u8ID2 = NVT_SPIM_IO_Read();                     // Read a byte from the FLASH
-    u8ID1 = NVT_SPIM_IO_Read();                     // Read a byte from the FLASH
-    u8ID0 = NVT_SPIM_IO_Read();                     // Read a byte from the FLASH
-
-    SPIM_SET_SS_EN(0);                          // CS is inactive (High)
-
-    return ((u8ID2 << 16) | (u8ID1 << 8) | u8ID0);
-}
-
-static void NVT_SPIM_DMA_Write(uint32_t u32Addr, uint32_t u32Size, uint8_t *pu8Buf)
-{
-    SPIM->CTL0 = (SPIM->CTL0 & ~(SPIM_CTL0_CMDCODE_Msk | SPIM_CTL0_OPMODE_Msk)) | (CMD_NORMAL_PAGE_PROGRAM | SPIM_CTL0_OPMODE_PAGEWRITE);
-
-    SPIM->SRAMADDR = (uint32_t)pu8Buf;          // SRAM Memory Address
-
-    SPIM->DMACNT = u32Size;                     // DMA Transfer Byte Count
-
-    SPIM->FADDR = u32Addr;                      // SPI Flash Address
-
-    SPIM_SET_GO();                              // Start Transfer
-
-    SPIM_WAIT_FREE();                           // Wait until SPI transfer is finished
-}
-
-static void NVT_SPIM_DMA_Read(uint32_t u32Addr, uint32_t u32Size, uint8_t *pu8Buf)
-{
-    SPIM->CTL0 = (SPIM->CTL0 & ~(SPIM_CTL0_CMDCODE_Msk | SPIM_CTL0_OPMODE_Msk)) | (CMD_DMA_NORMAL_READ | SPIM_CTL0_OPMODE_PAGEREAD);
-
-    SPIM->SRAMADDR = (uint32_t)pu8Buf;          // SRAM Memory Address
-
-    SPIM->DMACNT = u32Size;                     // DMA Transfer Byte Count
-
-    SPIM->FADDR = u32Addr;                      // SPI Flash Address
-
-    SPIM_SET_GO();                              // Start Transfer
-
-    SPIM_WAIT_FREE();                           // Wait until SPI transfer is finished
-}
-
-static uint8_t SPIFLASH_CheckStatus(uint8_t u8Flag, uint8_t u8Value)
-{
-    uint8_t u8Status;
-
-    SPIM_SET_SS_EN(1);                          // CS is active (Low)
-
-    SPIM->CTL0 = (SPIM->CTL0 & ~(SPIM_CTL0_OPMODE_Msk | SPIM_CTL0_QDIODIR_Msk)) | ((SPIM_CTL0_OPMODE_IO) | (1 << SPIM_CTL0_QDIODIR_Pos));
-
-    NVT_SPIM_IO_Write(OPCODE_RDSR);                 // Send read status register
-
-    SPIM->CTL0 = (SPIM->CTL0 & ~(SPIM_CTL0_OPMODE_Msk | SPIM_CTL0_QDIODIR_Msk)) | ((SPIM_CTL0_OPMODE_IO) | (0 << SPIM_CTL0_QDIODIR_Pos));
+    uint8_t u8ReturnValue;
+    uint32_t u32TimeOutCnt = SystemCoreClock; /* 1 second time-out */
 
     do
     {
-        u8Status = NVT_SPIM_IO_Read();              // Read status
+        if(--u32TimeOutCnt == 0)
+        {
+            printf("Wait for SPI time-out!\n");
+            return -1;
+        }
+
+        u8ReturnValue = SpiFlash_ReadStatusReg();
+        u8ReturnValue = u8ReturnValue & 1;
     }
-    while ((u8Status & u8Flag) != u8Value);     // Write in progress
+    while(u8ReturnValue != 0); // check the BUSY bit
 
-    SPIM_SET_SS_EN(0);                          // CS is inactive (High)
-
-    return u8Status;
+    return 0;
 }
 
-static uint8_t SPIFLASH_WriteEnable(void)
+uint32_t SpiFlash_ReadJedecID(void)
 {
-    uint8_t u8Status;
+    uint8_t u8RxData[4], u8IDCnt = 0;
 
-    SPIM_SET_SS_EN(1);                          // CS is active (Low)
+    // /CS: active
+    SPI_SET_SS_LOW(SPI_FLASH_PORT);
 
-    SPIM->CTL0 = (SPIM->CTL0 & ~(SPIM_CTL0_OPMODE_Msk | SPIM_CTL0_QDIODIR_Msk)) | ((SPIM_CTL0_OPMODE_IO) | (1 << SPIM_CTL0_QDIODIR_Pos));
+    // send Command: 0x9F, Read JEDEC ID
+    SPI_WRITE_TX(SPI_FLASH_PORT, 0x9F);
 
-    NVT_SPIM_IO_Write(OPCODE_WREN);                 // Send write enable
+    // receive 32-bit
+    SPI_WRITE_TX(SPI_FLASH_PORT, 0x00);
+    SPI_WRITE_TX(SPI_FLASH_PORT, 0x00);
+    SPI_WRITE_TX(SPI_FLASH_PORT, 0x00);
+    SPI_WRITE_TX(SPI_FLASH_PORT, 0x00);
 
-    SPIM_SET_SS_EN(0);                          // CS is inactive (High)
+    // wait tx finish
+    wait_SPI_IS_BUSY(SPI_FLASH_PORT);
 
-    u8Status = SPIFLASH_CheckStatus((SR_WEL | SR_WIP), SR_WEL);
+    // /CS: de-active
+    SPI_SET_SS_HIGH(SPI_FLASH_PORT);
 
-    return u8Status;
+    while(!SPI_GET_RX_FIFO_EMPTY_FLAG(SPI_FLASH_PORT))
+        u8RxData[u8IDCnt++] = (uint8_t)SPI_READ_RX(SPI_FLASH_PORT);
+
+    return (uint32_t)((u8RxData[1] << 16) | (u8RxData[2] << 8) | u8RxData[3]);
 }
 
-int32_t NVT_NVSPI_Init(uint32_t fnc)
+int32_t NVT_NVSPI_Init(void)
 {
-    uint32_t u32Reg, u32JEDEC_ID;
+    uint32_t id;
 
-    SYS->REGLCTL = 0x59;                            // Unlock System Control Registers
-    SYS->REGLCTL = 0x16;
-    SYS->REGLCTL = 0x88;
+    SYS_UnlockReg();
 
-    if (SYS->REGLCTL != 1)
-        return (1);                                  // Not able to unlock
+    CLK_EnableModuleClock(GPA_MODULE);
 
-    if ((CLK->STATUS & CLK_PWRCTL_HIRCEN_Msk) == 0)
+    CLK_EnableModuleClock(SPI2_MODULE);
+
+    CLK_SetModuleClock(SPI2_MODULE, CLK_CLKSEL3_SPI2SEL_PCLK1, MODULE_NoMsk);
+
+    SET_SPI2_MOSI_PA8();
+    SET_SPI2_MISO_PA9();
+    SET_SPI2_CLK_PA10();
+    SET_SPI2_SS_PA11();
+    
+    /* Enable SPI clock pin (PA10) schmitt trigger */
+    PA->SMTEN |= GPIO_SMTEN_SMTEN10_Msk;
+
+    /* Enable SPI I/O high slew rate */
+    GPIO_SetSlewCtl(PA, BIT8 | BIT9 | BIT10 | BIT11, GPIO_SLEWCTL_HIGH);
+
+    /* Configure SPI_FLASH_PORT as a master, MSB first, 8-bit transaction, SPI Mode-0 timing, clock is 2MHz */
+    SPI_Open(SPI_FLASH_PORT, SPI_MASTER, SPI_MODE_0, 8, 2000000);
+
+    /* Disable auto SS function, control SS signal manually. */
+    SPI_DisableAutoSS(SPI_FLASH_PORT);
+
+    id = SpiFlash_ReadJedecID();
+
+    switch(id)
     {
-        CLK->PWRCTL |= CLK_PWRCTL_HIRCEN_Msk;           // Enable HIRC
-
-        while (!(CLK->STATUS & CLK_STATUS_HIRCSTB_Msk));
+        case 0xEF4014:
+        case 0xEF4015:
+        case 0xEF4016:
+        case 0xEF4017:
+        case 0xEF4018:
+            break;
+        default:
+            return -1;
     }
 
-    CLK->CLKSEL0 |= (0x07UL << CLK_CLKSEL0_HCLKSEL_Pos);
-    CLK->CLKDIV0 &= ~CLK_CLKDIV0_HCLKDIV_Msk;
-
-    CLK->AHBCLK0 |= CLK_AHBCLK0_SPIMCKEN_Msk;
-
-    SYS->IPRST0 |= SYS_IPRST0_SPIMRST_Msk;
-    SYS->IPRST0 &= ~SYS_IPRST0_SPIMRST_Msk;
-
-    SPIM->CTL0 = SPIM_CTL0_OPMODE_IO | SPIM_CTL0_BITMODE_SING | (1 << SPIM_CTL0_QDIODIR_Pos) | (0 << SPIM_CTL0_BURSTNUM_Pos) | ((8-1) << SPIM_CTL0_DWIDTH_Pos);
-
-    SPIM->CTL1 = (SPIM->CTL1 & ~(SPIM_CTL1_DIVIDER_Msk | SPIM_CTL1_SSACTPOL_Msk)) | SPIM_CTL1_SS_Msk;
-
-    u32Reg = (fnc >> 24) & 0xFF;
-
-    if (u32Reg == 0xAD)
-    {
-        uint32_t u32SS_SEL, u32CLK_SEL, u32MISO_SEL, u32MOSI_SEL;
-
-        u32SS_SEL   = (fnc >>  0) & 0x0F;
-        u32CLK_SEL  = (fnc >>  4) & 0x0F;
-        u32MISO_SEL = (fnc >>  8) & 0x0F;
-        u32MOSI_SEL = (fnc >> 12) & 0x0F;
-
-        switch (u32SS_SEL)
-        {
-            case 0:
-                SYS->GPA_MFP0 = (SYS->GPA_MFP0 & ~SYS_GPA_MFP0_PA3MFP_Msk) | (0x2 << SYS_GPA_MFP0_PA3MFP_Pos);
-                break;
-            case 1:
-                SYS->GPC_MFP0 = (SYS->GPC_MFP0 & ~SYS_GPC_MFP0_PC3MFP_Msk) | (0x3 << SYS_GPC_MFP0_PC3MFP_Pos);
-                break;
-            case 2:
-                SYS->GPE_MFP1 = (SYS->GPE_MFP1 & ~SYS_GPE_MFP1_PE5MFP_Msk) | (0x4 << SYS_GPE_MFP1_PE5MFP_Pos);
-                break;
-            case 3:
-                SYS->GPG_MFP2 = (SYS->GPG_MFP2 & ~SYS_GPG_MFP2_PG11MFP_Msk) | (0x4 << SYS_GPG_MFP2_PG11MFP_Pos);
-                break;
-            case 4:
-                SYS->GPI_MFP3 = (SYS->GPI_MFP3 & ~SYS_GPI_MFP3_PI12MFP_Msk) | (0x3 << SYS_GPI_MFP3_PI12MFP_Pos);
-                break;
-            case 5:
-                SYS->GPJ_MFP2 = (SYS->GPJ_MFP2 & ~SYS_GPJ_MFP2_PJ8MFP_Msk) | (0x4 << SYS_GPJ_MFP2_PJ8MFP_Pos);
-                break;
-            default:
-                return (1);
-        }
-
-        switch (u32CLK_SEL)
-        {
-            case 0:
-                SYS->GPA_MFP0 = (SYS->GPA_MFP0 & ~SYS_GPA_MFP0_PA2MFP_Msk) | (0x2 << SYS_GPA_MFP0_PA2MFP_Pos);
-                break;
-            case 1:
-                SYS->GPC_MFP0 = (SYS->GPC_MFP0 & ~SYS_GPC_MFP0_PC2MFP_Msk) | (0x3 << SYS_GPC_MFP0_PC2MFP_Pos);
-                break;
-            case 2:
-                SYS->GPE_MFP1 = (SYS->GPE_MFP1 & ~SYS_GPE_MFP1_PE4MFP_Msk) | (0x4 << SYS_GPE_MFP1_PE4MFP_Pos);
-                break;
-            case 3:
-                SYS->GPG_MFP3 = (SYS->GPG_MFP3 & ~SYS_GPG_MFP3_PG12MFP_Msk) | (0x4 << SYS_GPG_MFP3_PG12MFP_Pos);
-                break;
-            case 4:
-                SYS->GPJ_MFP0 = (SYS->GPJ_MFP0 & ~SYS_GPJ_MFP0_PJ0MFP_Msk) | (0x3 << SYS_GPJ_MFP0_PJ0MFP_Pos);
-                break;
-            case 5:
-                SYS->GPJ_MFP3 = (SYS->GPJ_MFP3 & ~SYS_GPJ_MFP3_PJ12MFP_Msk) | (0x4 << SYS_GPJ_MFP3_PJ12MFP_Pos);
-                break;
-            default:
-                return (1);
-        }
-
-        switch (u32MISO_SEL)
-        {
-            case 0:
-                SYS->GPA_MFP0 = (SYS->GPA_MFP0 & ~SYS_GPA_MFP0_PA1MFP_Msk) | (0x2 << SYS_GPA_MFP0_PA1MFP_Pos);
-                break;
-            case 1:
-                SYS->GPC_MFP0 = (SYS->GPC_MFP0 & ~SYS_GPC_MFP0_PC1MFP_Msk) | (0x3 << SYS_GPC_MFP0_PC1MFP_Pos);
-                break;
-            case 2:
-                SYS->GPE_MFP0 = (SYS->GPE_MFP0 & ~SYS_GPE_MFP0_PE3MFP_Msk) | (0x4 << SYS_GPE_MFP0_PE3MFP_Pos);
-                break;
-            case 3:
-                SYS->GPG_MFP3 = (SYS->GPG_MFP3 & ~SYS_GPG_MFP3_PG13MFP_Msk) | (0x4 << SYS_GPG_MFP3_PG13MFP_Pos);
-                break;
-            case 4:
-                SYS->GPI_MFP3 = (SYS->GPI_MFP3 & ~SYS_GPI_MFP3_PI13MFP_Msk) | (0x3 << SYS_GPI_MFP3_PI13MFP_Pos);
-                break;
-            case 5:
-                SYS->GPJ_MFP2 = (SYS->GPJ_MFP2 & ~SYS_GPJ_MFP2_PJ9MFP_Msk) | (0x4 << SYS_GPJ_MFP2_PJ9MFP_Pos);
-                break;
-            default:
-                return (1);
-        }
-
-        switch (u32MOSI_SEL)
-        {
-            case 0:
-                SYS->GPA_MFP0 = (SYS->GPA_MFP0 & ~SYS_GPA_MFP0_PA0MFP_Msk) | (0x2 << SYS_GPA_MFP0_PA0MFP_Pos);
-                break;
-            case 1:
-                SYS->GPC_MFP0 = (SYS->GPC_MFP0 & ~SYS_GPC_MFP0_PC0MFP_Msk) | (0x3 << SYS_GPC_MFP0_PC0MFP_Pos);
-                break;
-            case 2:
-                SYS->GPE_MFP0 = (SYS->GPE_MFP0 & ~SYS_GPE_MFP0_PE2MFP_Msk) | (0x4 << SYS_GPE_MFP0_PE2MFP_Pos);
-                break;
-            case 3:
-                SYS->GPG_MFP3 = (SYS->GPG_MFP3 & ~SYS_GPG_MFP3_PG14MFP_Msk) | (0x4 << SYS_GPG_MFP3_PG14MFP_Pos);
-                break;
-            case 4:
-                SYS->GPJ_MFP0 = (SYS->GPJ_MFP0 & ~SYS_GPJ_MFP0_PJ1MFP_Msk) | (0x3 << SYS_GPJ_MFP0_PJ1MFP_Pos);
-                break;
-            case 5:
-                SYS->GPJ_MFP3 = (SYS->GPJ_MFP3 & ~SYS_GPJ_MFP3_PJ13MFP_Msk) | (0x4 << SYS_GPJ_MFP3_PJ13MFP_Pos);
-                break;
-            case 6:
-                SYS->GPA_MFP3 = (SYS->GPA_MFP3 & ~SYS_GPA_MFP3_PA15MFP_Msk) | (0x4 << SYS_GPA_MFP3_PA15MFP_Pos);
-                break;
-            default:
-                return (1);
-        }
-    }
-    else
-    {
-        SYS->GPA_MFP0 = (SYS->GPA_MFP0 & ~(SYS_GPA_MFP0_PA0MFP_Msk | SYS_GPA_MFP0_PA1MFP_Msk | SYS_GPA_MFP0_PA2MFP_Msk | SYS_GPA_MFP0_PA3MFP_Msk)) | ((0x2 << SYS_GPA_MFP0_PA0MFP_Pos) | (0x2 << SYS_GPA_MFP0_PA1MFP_Pos) | (0x2 << SYS_GPA_MFP0_PA2MFP_Pos) | (0x2 << SYS_GPA_MFP0_PA3MFP_Pos));
-        SYS->GPA_MFP1 = (SYS->GPA_MFP1 & ~(SYS_GPA_MFP1_PA4MFP_Msk | SYS_GPA_MFP1_PA5MFP_Msk)) | ((0x2 << SYS_GPA_MFP1_PA4MFP_Pos) | (0x2 << SYS_GPA_MFP1_PA5MFP_Pos));
-    }
-
-    u32JEDEC_ID = SPIFLASH_ReadID();
-
-    if ((u32JEDEC_ID == 0x000000) || (u32JEDEC_ID == 0xFFFFFF))
-        return (1);
-
-    return (0);
+    return 0;
 }
 
-int32_t NVT_NVSPI_Read(uint32_t addr, uint32_t size, uint32_t *data)
+int32_t NVT_NVSPI_Read(uint32_t addr, uint32_t len, uint8_t *data)
 {
-    SPIM_SET_SS_EN(1);                              // CS is active (Low)
+    uint32_t u32Cnt;
 
-    NVT_SPIM_DMA_Read(addr, size, (uint8_t *)data);
+    // /CS: active
+    SPI_SET_SS_LOW(SPI_FLASH_PORT);
 
-    SPIM_SET_SS_EN(0);                              // CS is inactive (High)
+    // send Command: 0x03, Read data
+    SPI_WRITE_TX(SPI_FLASH_PORT, 0x03);
 
-    return (0);
+    // send 24-bit start address
+    SPI_WRITE_TX(SPI_FLASH_PORT, (addr >> 16) & 0xFF);
+    SPI_WRITE_TX(SPI_FLASH_PORT, (addr >> 8)  & 0xFF);
+    SPI_WRITE_TX(SPI_FLASH_PORT, addr       & 0xFF);
+
+    wait_SPI_IS_BUSY(SPI_FLASH_PORT);
+    // clear RX buffer
+    SPI_ClearRxFIFO(SPI_FLASH_PORT);
+
+    // read data
+    for(u32Cnt = 0; u32Cnt < len; u32Cnt++)
+    {
+        SPI_WRITE_TX(SPI_FLASH_PORT, 0x00);
+        wait_SPI_IS_BUSY(SPI_FLASH_PORT);
+        data[u32Cnt] = (uint8_t)SPI_READ_RX(SPI_FLASH_PORT);
+    }
+
+    // wait tx finish
+    wait_SPI_IS_BUSY(SPI_FLASH_PORT);
+
+    // /CS: de-active
+    SPI_SET_SS_HIGH(SPI_FLASH_PORT);
+
+    return 0;
 }
 
-int32_t NVT_NVSPI_Program(uint32_t addr, uint32_t size, uint8_t *buf)
+int32_t NVT_NVSPI_Program(uint32_t addr, uint32_t len, uint8_t *buf)
 {
-    uint8_t u8Status;
+    uint32_t i;
 
-    u8Status = SPIFLASH_WriteEnable();
+    // /CS: active
+    SPI_SET_SS_LOW(SPI_FLASH_PORT);
 
-    if ((u8Status & SR_WEL) == 0)
-        return (1);
+    // send Command: 0x06, Write enable
+    SPI_WRITE_TX(SPI_FLASH_PORT, 0x06);
 
-    SPIM_SET_SS_EN(1);                              // CS is active (Low)
+    // wait tx finish
+    wait_SPI_IS_BUSY(SPI_FLASH_PORT);
 
-    NVT_SPIM_DMA_Write(addr, size, buf);
+    // /CS: de-active
+    SPI_SET_SS_HIGH(SPI_FLASH_PORT);
 
-    SPIM_SET_SS_EN(0);                              // CS is inactive (High)
 
-    u8Status = SPIFLASH_CheckStatus(SR_WIP, 0);
+    // /CS: active
+    SPI_SET_SS_LOW(SPI_FLASH_PORT);
 
-    if (u8Status != 0)
-        return (1);
+    // send Command: 0x02, Page program
+    SPI_WRITE_TX(SPI_FLASH_PORT, 0x02);
 
-    return (0);
+    // send 24-bit start address
+    SPI_WRITE_TX(SPI_FLASH_PORT, (addr >> 16) & 0xFF);
+    SPI_WRITE_TX(SPI_FLASH_PORT, (addr >> 8)  & 0xFF);
+    SPI_WRITE_TX(SPI_FLASH_PORT,  addr        & 0xFF);
+
+    // write data
+    while(1)
+    {
+        if(!SPI_GET_TX_FIFO_FULL_FLAG(SPI_FLASH_PORT))
+        {
+            for (i = 0; i < len; i++)
+            {
+                SPI_WRITE_TX(SPI_FLASH_PORT, buf[len]);
+            }
+        }
+    }
+
+    // wait tx finish
+    wait_SPI_IS_BUSY(SPI_FLASH_PORT);
+
+    SPI_ClearRxFIFO(SPI_FLASH_PORT);
+
+    // /CS: de-active
+    SPI_SET_SS_HIGH(SPI_FLASH_PORT);
+
+
+    return 0;
 }
 
 int32_t NVT_NVSPI_Erase(uint32_t addr)
 {
-    uint8_t u8Status;
+    // /CS: active
+    SPI_SET_SS_LOW(SPI_FLASH_PORT);
 
-    SPIM_WAIT_FREE();
+    // send Command: 0x06, Write enable
+    SPI_WRITE_TX(SPI_FLASH_PORT, 0x06);
 
-    u8Status = SPIFLASH_WriteEnable();
+    // wait tx finish
+    wait_SPI_IS_BUSY(SPI_FLASH_PORT);
 
-    if ((u8Status & SR_WEL) == 0)
-        return (1);
+    // /CS: de-active
+    SPI_SET_SS_HIGH(SPI_FLASH_PORT);
 
-    SPIM_SET_SS_EN(1);                              // CS is active (Low)
+    // /CS: active
+    SPI_SET_SS_LOW(SPI_FLASH_PORT);
 
-    SPIM->CTL0 = (SPIM->CTL0 & ~(SPIM_CTL0_OPMODE_Msk | SPIM_CTL0_QDIODIR_Msk)) | ((SPIM_CTL0_OPMODE_IO) | (1 << SPIM_CTL0_QDIODIR_Pos));
+    // send Command: 0x20, sector erase
+    SPI_WRITE_TX(SPI_FLASH_PORT, 0x20);
 
-    NVT_SPIM_IO_Write(OPCODE_SE_4K);                    // Send Sector Erase instruction
+    // send 24-bit address
+    SPI_WRITE_TX(SPI_FLASH_PORT, (addr >> 16) & 0xFF);
+    SPI_WRITE_TX(SPI_FLASH_PORT, (addr >> 8)  & 0xFF);
+    SPI_WRITE_TX(SPI_FLASH_PORT,  addr        & 0xFF);
 
-    NVT_SPIM_IO_Write((addr >> 16) & 0xFF);
-    NVT_SPIM_IO_Write((addr >>  8) & 0xFF);
-    NVT_SPIM_IO_Write((addr      ) & 0xFF);
+    // wait tx finish
+    wait_SPI_IS_BUSY(SPI_FLASH_PORT);
 
-    SPIM_SET_SS_EN(0);                              // CS is inactive (High)
+    SPI_ClearRxFIFO(SPI_FLASH_PORT);
 
-    u8Status = SPIFLASH_CheckStatus(SR_WIP, 0);
+    // /CS: de-active
+    SPI_SET_SS_HIGH(SPI_FLASH_PORT);
 
-    return (0);
+    return 0;
 }

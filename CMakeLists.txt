@@ -4,6 +4,7 @@ cmake_minimum_required(VERSION 3.21)
 
 include(${CMAKE_SOURCE_DIR}/bl2/ext/mcuboot/mcuboot_default_config.cmake)
 include(${CMAKE_SOURCE_DIR}/config/config_base.cmake)
+include(${CMAKE_SOURCE_DIR}/config/validation.cmake)
 
 ######################### Compiler configuration ###############################
 
@@ -18,3 +19,5 @@ set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
 
 add_subdirectory(lib/ext)
 add_subdirectory(bl2)
+
+validate_config()

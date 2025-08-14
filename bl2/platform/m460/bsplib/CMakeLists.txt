@@ -15,8 +15,22 @@ target_sources(bsp_lib
         bsp/Library/StdDriver/src/clk.c
         bsp/Library/StdDriver/src/sys.c
         bsp/Library/StdDriver/src/fmc.c
-        $<$<BOOL:${SECONDARY_SLOT_IN_SPI_FLASH}>:bsp/Library/StdDriver/src/spim.c>
 )
+
+if(SECONDARY_SLOT_IN_SPI_FLASH)
+    if(USE_SPIM)
+        target_sources(bsp_lib
+            PRIVATE
+                bsp/Library/StdDriver/src/spim.c
+        )
+    else()
+        target_sources(bsp_lib
+            PRIVATE
+                bsp/Library/StdDriver/src/spi.c
+                bsp/Library/StdDriver/src/gpio.c
+        )
+    endif()
+endif()
 
 if (CMAKE_C_COMPILER_ID STREQUAL "ARMClang")
 target_sources(bsp_lib

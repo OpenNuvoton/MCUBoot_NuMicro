@@ -3,3 +3,5 @@ set(NU_MCUBOOT_LIB_PATH ${CMAKE_SOURCE_DIR}/lib/ext/mcubootlib CACHE PATH "Path 
 set(NU_MCUBOOT_PATH ${NU_MCUBOOT_LIB_PATH}/mcuboot CACHE PATH "Path to MCUBoot")
 set(NU_MBEDTLS_LIB_PATH ${CMAKE_SOURCE_DIR}/lib/ext/mbedtlslib CACHE PATH "Path to parent directory of MbedTLS")
 set(NU_MBEDTLS_PATH ${NU_MBEDTLS_LIB_PATH}/mbedtls CACHE PATH "Path to MbedTLS")
+set(SECONDARY_SLOT_IN_SPI_FLASH OFF CACHE BOOL "Enable support for secondary slot residing in SPI flash")
+set(USE_SPIM OFF CACHE BOOL "Use SPIM driver")
