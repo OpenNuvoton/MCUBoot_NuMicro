@@ -81,7 +81,22 @@ pyocd load -t m467hjhae build/bin/bl2.bin
 
 ### Customization
 
-The bootloader behavior can be customized using CMake variables, passed directly via the command line during CMake configuration.
+The bootloader behavior can be customized using CMake variables.
+CMake variables can be configured directly via command line arguments or specified within CMakeUserPresets.json.
+
+Change the algorithm used for signature validation:
+```
+-DMCUBOOT_SIG_TYPE=EC
+-DMCUBOOT_SIG_LEN=256
+```
+
+Use SPI flash as the secondary slot. The SPI flash uses the SPI interface by default. To enable the SPIM interface instead, configure `USE_SPIM=ON`.
+> [!WARNING]
+> The SPI flash driver is currently supported on M460 only.
+
+```
+-DSECONDARY_SLOT_IN_SPI_FLASH=ON
+```
 
 Enable more verbose logging:
 ```
