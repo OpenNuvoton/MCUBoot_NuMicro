@@ -110,6 +110,16 @@ Change upgrade strategies:
 
 Check available configuration options in [mcuboot_default_config.cmake](https://github.com/OpenNuvoton/MCUBoot_NuMicro/blob/master/bl2/ext/mcuboot/mcuboot_default_config.cmake).
 
+#### Flash Layout
+
+The flash layout file configures image slot parameters, such as the address or the size of secondary slot.
+For M460, this sets the primary slot to 64 KiB starting at 0x30000:
+```C
+// bl2/platform/m460/partition/flash_layout.h
+#define FLASH_AREA_0_OFFSET        (0x30000)
+#define FLASH_AREA_0_SIZE          (0x10000)
+```
+
 ## Supported Platform
 
 | Device | Core  |
