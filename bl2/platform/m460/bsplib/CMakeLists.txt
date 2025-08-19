@@ -18,12 +18,18 @@ target_sources(bsp_lib
 )
 
 if(SECONDARY_SLOT_IN_SPI_FLASH)
-    if(USE_SPIM)
+    if(SPI_DRIVER STREQUAL SPIM)
         target_sources(bsp_lib
             PRIVATE
                 bsp/Library/StdDriver/src/spim.c
         )
-    else()
+    elseif(SPI_DRIVER STREQUAL QSPI)
+        target_sources(bsp_lib
+            PRIVATE
+                bsp/Library/StdDriver/src/qspi.c
+                bsp/Library/StdDriver/src/gpio.c
+        )
+    elseif(SPI_DRIVER STREQUAL GENERIC)
         target_sources(bsp_lib
             PRIVATE
                 bsp/Library/StdDriver/src/spi.c

@@ -6,9 +6,9 @@
 #include "nvmc_drv.h"
 #include "nvspim_drv.h"
 #include "nvspi_drv.h"
+#include "nvqspi_drv.h"
 #include "flash_layout.h"
 #include "region_defs.h"
-
 
 #ifndef ARG_UNUSED
 #define ARG_UNUSED(arg)  ((void)arg)
@@ -122,7 +122,7 @@ static struct arm_flash_dev_t ARM_FLASH1_DEV =
 struct arm_flash_dev_t *FLASH1_DEV = &ARM_FLASH1_DEV;
 
 #ifdef SECONDARY_SLOT_IN_SPI_FLASH
-#ifdef USE_SPIM
+#if defined(USE_SPIM)
 static ARM_FLASH_INFO ARM_FLASH2_DEV_DATA =
 {
     .sector_info = NULL,
@@ -138,7 +138,7 @@ static struct arm_flash_dev_t ARM_FLASH2_DEV =
     .memory_base = NVT_NVSPIM_MEMORY_BASE,
     .data        = &ARM_FLASH2_DEV_DATA
 };
-#else
+#elif defined(USE_SPI)
 static ARM_FLASH_INFO ARM_FLASH2_DEV_DATA =
 {
     .sector_info = NULL,
@@ -152,6 +152,22 @@ static ARM_FLASH_INFO ARM_FLASH2_DEV_DATA =
 static struct arm_flash_dev_t ARM_FLASH2_DEV =
 {
     .memory_base = NVT_NVSPI_MEMORY_BASE,
+    .data        = &ARM_FLASH2_DEV_DATA
+};
+#elif defined(USE_QSPI)
+static ARM_FLASH_INFO ARM_FLASH2_DEV_DATA =
+{
+    .sector_info = NULL,
+    .sector_count = NVT_NVQSPI_SECTOR_COUNT,
+    .sector_size  = NVT_NVQSPI_SECTOR_SIZE,
+    .page_size    = NVT_NVQSPI_PAGE_SIZE,
+    .program_unit = NVT_NVQSPI_PROGRAM_UNIT,
+    .erased_value = 0xFF
+};
+
+static struct arm_flash_dev_t ARM_FLASH2_DEV =
+{
+    .memory_base = NVT_NVQSPI_MEMORY_BASE,
     .data        = &ARM_FLASH2_DEV_DATA
 };
 #endif
@@ -308,7 +324,7 @@ static int32_t ARM_Flash_ReadData_Internal(uint32_t start_addr, void *data, uint
     remain = sz;
     addr = start_addr;
 
-    //printf("[%s]: Read 0x%x (0x%x bytes)\n", __func__, addr, sz);
+    // printf("[%s]: Read 0x%x (0x%x bytes)\n", __func__, addr, sz);
     while (remain > 0)
     {
         ret = NVT_NVMC_Read(addr, &r_data);
@@ -480,7 +496,7 @@ static ARM_FLASH_INFO * ARM_Flash_GetInfo_LDROM(void)
 }
 
 #ifdef SECONDARY_SLOT_IN_SPI_FLASH
-#ifdef USE_SPIM
+#if defined(USE_SPIM)
 static int32_t ARM_Flash_Initialize_SPIM(ARM_Flash_SignalEvent_t cb_event)
 {
     ARG_UNUSED(cb_event);
@@ -504,7 +520,7 @@ static int32_t ARM_Flash_ReadData_SPIM(uint32_t addr, void *data, uint32_t cnt)
     /* Conversion between data items and bytes */
     sz = cnt * data_width_byte[DriverCapabilities.data_width];
 
-    printf("[%s]: Read 0x%x (0x%x bytes)\n", __func__, addr, sz);
+    // printf("[%s]: Read 0x%x (0x%x bytes)\n", __func__, addr, sz);
 
     if ((addr < NVT_NVSPIM_MEMORY_BASE) || ((addr + sz) > (NVT_NVSPIM_MEMORY_BASE + SPIM_DMM_SIZE)))
         return ARM_DRIVER_ERROR_PARAMETER;
@@ -534,7 +550,7 @@ static int32_t ARM_Flash_ProgramData_SPIM(uint32_t addr, const void *data, uint3
 
     sz = cnt * data_width_byte[DriverCapabilities.data_width];
 
-    printf("[%s]: Write 0x%x (0x%x bytes)\n", __func__, addr, sz);
+    // printf("[%s]: Write 0x%x (0x%x bytes)\n", __func__, addr, sz);
 
     if ((addr < NVT_NVSPIM_MEMORY_BASE) || ((addr + sz) > (NVT_NVSPIM_MEMORY_BASE + SPIM_DMM_SIZE)))
         return ARM_DRIVER_ERROR_PARAMETER;
@@ -575,7 +591,7 @@ static ARM_FLASH_INFO * ARM_Flash_GetInfo_SPIM(void)
 {
     return FLASH2_DEV->data;
 }
-#else
+#elif defined(USE_SPI)
 
 static int32_t is_range_valid_SPI(uint32_t addr)
 {
@@ -606,7 +622,7 @@ static int32_t ARM_Flash_ReadData_SPI(uint32_t addr, void *data, uint32_t cnt)
     /* Conversion between data items and bytes */
     sz = cnt * data_width_byte[DriverCapabilities.data_width];
 
-    printf("[%s]: Read 0x%x (0x%x bytes)\n", __func__, addr, sz);
+    // printf("[%s]: Read 0x%x (0x%x bytes)\n", __func__, addr, sz);
 
     r = is_range_valid_SPI(addr);
     if (r != 0)
@@ -644,7 +660,7 @@ static int32_t ARM_Flash_ProgramData_SPI(uint32_t addr, const void *data, uint32
 
     sz = cnt * data_width_byte[DriverCapabilities.data_width];
 
-    printf("[%s]: Write 0x%x (0x%x bytes)\n", __func__, addr, sz);
+    // printf("[%s]: Write 0x%x (0x%x bytes)\n", __func__, addr, sz);
 
     r = is_range_valid_SPI(addr);
     if (r != 0)
@@ -661,6 +677,10 @@ static int32_t ARM_Flash_ProgramData_SPI(uint32_t addr, const void *data, uint32
             u32Len = NVT_NVSPI_PAGE_SIZE;
 
         if (NVT_NVSPI_Program(addr, u32Len, (uint8_t *)data) != 0)
+        {
+            return ARM_DRIVER_ERROR;
+        }
+        if (NVT_NVSPI_WaitReady() < 0)
         {
             return ARM_DRIVER_ERROR;
         }
@@ -689,6 +709,10 @@ static int32_t ARM_Flash_EraseSector_SPI(uint32_t addr)
     {
         return ARM_DRIVER_ERROR;
     }
+    if (NVT_NVSPI_WaitReady() < 0)
+    {
+        return ARM_DRIVER_ERROR;
+    }
 
     return ARM_DRIVER_OK;
 }
@@ -697,7 +721,135 @@ static ARM_FLASH_INFO * ARM_Flash_GetInfo_SPI(void)
 {
     return FLASH2_DEV->data;
 }
+#elif defined(USE_QSPI)
+static int32_t is_range_valid_QSPI(uint32_t addr)
+{
+    return is_range_valid_internal(&ARM_FLASH2_DEV, addr);
+}
 
+static int32_t ARM_Flash_Initialize_QSPI(ARM_Flash_SignalEvent_t cb_event)
+{
+    ARG_UNUSED(cb_event);
+
+    if (DriverCapabilities.data_width >= DATA_WIDTH_ENUM_SIZE) {
+        return ARM_DRIVER_ERROR;
+    }
+
+    if (NVT_NVQSPI_Init() != 0) {
+        return ARM_DRIVER_ERROR;
+    }
+
+    return ARM_DRIVER_OK;
+}
+
+static int32_t ARM_Flash_ReadData_QSPI(uint32_t addr, void *data, uint32_t cnt)
+{
+    uint32_t u32Len;
+    uint32_t sz;
+    int32_t r;
+
+    /* Conversion between data items and bytes */
+    sz = cnt * data_width_byte[DriverCapabilities.data_width];
+
+    // printf("[%s]: Read 0x%x (0x%x bytes)\n", __func__, addr, sz);
+
+    r = is_range_valid_QSPI(addr);
+    if (r != 0)
+    {
+        return ARM_DRIVER_ERROR_PARAMETER;
+    }
+
+    addr -= NVT_NVQSPI_MEMORY_BASE;
+
+    while (sz)
+    {
+        u32Len = sz;
+        if (u32Len > NVT_NVQSPI_PAGE_SIZE)
+            u32Len = NVT_NVQSPI_PAGE_SIZE;
+
+        r = NVT_NVQSPI_Read(addr, u32Len, data);
+        if (r != 0)
+        {
+            return ARM_DRIVER_ERROR;
+        }
+
+        addr += u32Len;
+        data += u32Len;
+        sz  -= u32Len;
+    }
+
+    return ARM_DRIVER_OK;
+}
+
+static int32_t ARM_Flash_ProgramData_QSPI(uint32_t addr, const void *data, uint32_t cnt)
+{
+    uint32_t u32Len;
+    uint32_t sz;
+    int32_t r;
+
+    sz = cnt * data_width_byte[DriverCapabilities.data_width];
+
+    // printf("[%s]: Write 0x%x (0x%x bytes)\n", __func__, addr, sz);
+
+    r = is_range_valid_QSPI(addr);
+    if (r != 0)
+    {
+        return ARM_DRIVER_ERROR_PARAMETER;
+    }
+
+    addr -= NVT_NVQSPI_MEMORY_BASE;
+
+    while (sz)
+    {
+        u32Len = sz;
+        if (u32Len > NVT_NVQSPI_PAGE_SIZE)
+            u32Len = NVT_NVQSPI_PAGE_SIZE;
+
+        if (NVT_NVQSPI_Program(addr, u32Len, (uint8_t *)data) != 0)
+        {
+            return ARM_DRIVER_ERROR;
+        }
+        if (NVT_NVQSPI_WaitReady() < 0)
+        {
+            return ARM_DRIVER_ERROR;
+        }
+
+        addr += u32Len;
+        data += u32Len;
+        sz  -= u32Len;
+    }
+
+    return ARM_DRIVER_OK;
+}
+
+static int32_t ARM_Flash_EraseSector_QSPI(uint32_t addr)
+{
+    int32_t r;
+
+    r = is_range_valid_QSPI(addr);
+    if (r != 0)
+    {
+        return ARM_DRIVER_ERROR_PARAMETER;
+    }
+
+    addr -= NVT_NVQSPI_MEMORY_BASE;
+
+    if (NVT_NVQSPI_Erase(addr) != 0)
+    {
+        return ARM_DRIVER_ERROR;
+    }
+    if (NVT_NVQSPI_WaitReady() < 0)
+    {
+        return ARM_DRIVER_ERROR;
+    }
+
+    return ARM_DRIVER_OK;
+}
+
+static ARM_FLASH_INFO * ARM_Flash_GetInfo_QSPI(void)
+{
+    return FLASH2_DEV->data;
+}
 #endif
 #endif
 
@@ -732,7 +884,7 @@ ARM_DRIVER_FLASH Driver_FLASH1 =
 };
 
 #ifdef SECONDARY_SLOT_IN_SPI_FLASH
-#ifdef USE_SPIM
+#if defined(USE_SPIM)
 ARM_DRIVER_FLASH Driver_FLASH2 =
 {
     ARM_Flash_GetVersion,
@@ -747,7 +899,7 @@ ARM_DRIVER_FLASH Driver_FLASH2 =
     ARM_Flash_GetStatus,
     ARM_Flash_GetInfo_SPIM
 };
-#else
+#elif defined(USE_SPI)
 ARM_DRIVER_FLASH Driver_FLASH2 =
 {
     ARM_Flash_GetVersion,
@@ -761,6 +913,21 @@ ARM_DRIVER_FLASH Driver_FLASH2 =
     NULL,
     ARM_Flash_GetStatus,
     ARM_Flash_GetInfo_SPI
+};
+#elif defined(USE_QSPI)
+ARM_DRIVER_FLASH Driver_FLASH2 =
+{
+    ARM_Flash_GetVersion,
+    ARM_Flash_GetCapabilities,
+    ARM_Flash_Initialize_QSPI,
+    ARM_Flash_Uninitialize,
+    ARM_Flash_PowerControl,
+    ARM_Flash_ReadData_QSPI,
+    ARM_Flash_ProgramData_QSPI,
+    ARM_Flash_EraseSector_QSPI,
+    NULL,
+    ARM_Flash_GetStatus,
+    ARM_Flash_GetInfo_QSPI
 };
 #endif
 #endif

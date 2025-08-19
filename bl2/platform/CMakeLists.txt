@@ -27,10 +27,15 @@ set (NVMC_DRV_SRC "common/fmc_drv.c")
 endif ()
 
 if (SECONDARY_SLOT_IN_SPI_FLASH)
-if (USE_SPIM)
+if (SPI_DRIVER STREQUAL SPIM)
 target_sources(platform_bl2_lib PRIVATE common/spim_drv.c)
-else ()
+target_compile_definitions(platform_bl2_lib PUBLIC $<$<STREQUAL:${SPI_DRIVER},SPIM>:USE_SPIM>)
+elseif (SPI_DRIVER STREQUAL QSPI)
+target_sources(platform_bl2_lib PRIVATE common/qspi_drv.c)
+target_compile_definitions(platform_bl2_lib PUBLIC $<$<STREQUAL:${SPI_DRIVER},QSPI>:USE_QSPI>)
+elseif (SPI_DRIVER STREQUAL GENERIC)
 target_sources(platform_bl2_lib PRIVATE common/spi_drv.c)
+target_compile_definitions(platform_bl2_lib PUBLIC $<$<STREQUAL:${SPI_DRIVER},GENERIC>:USE_SPI>)
 endif()
 endif()
 
@@ -55,7 +60,6 @@ target_compile_definitions(platform_bl2_lib
         $<$<BOOL:${MCUBOOT_HW_KEY}>:MCUBOOT_HW_KEY>
         $<$<BOOL:${NVMC_TYPE_RMC}>:NVMC_TYPE_RMC=${NVMC_TYPE_RMC}>
         $<$<STREQUAL:${PLATFORM_NAME},m460>:PLATFORM_M460>
-        $<$<BOOL:${USE_SPIM}>:USE_SPIM>
 )
 
 ######################### Platform Region Defs #################################
