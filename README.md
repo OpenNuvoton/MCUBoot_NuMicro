@@ -90,14 +90,6 @@ Change the algorithm used for signature validation:
 -DMCUBOOT_SIG_LEN=256
 ```
 
-Use SPI flash as the secondary slot. The SPI flash uses the SPI interface by default. To enable the SPIM interface instead, configure `USE_SPIM=ON`.
-> [!WARNING]
-> The SPI flash driver is currently supported on M460 only.
-
-```
--DSECONDARY_SLOT_IN_SPI_FLASH=ON
-```
-
 Enable more verbose logging:
 ```
 -DMCUBOOT_LOG_LEVEL=DEBUG
@@ -109,6 +101,25 @@ Change upgrade strategies:
 ```
 
 Check available configuration options in [mcuboot_default_config.cmake](https://github.com/OpenNuvoton/MCUBoot_NuMicro/blob/master/bl2/ext/mcuboot/mcuboot_default_config.cmake).
+
+#### Use SPI flash as the secondary slot
+
+> [!WARNING]
+> The SPI flash driver is currently supported on M460 only.
+
+```
+-DSECONDARY_SLOT_IN_SPI_FLASH=ON
+```
+
+The SPI flash uses the standard SPI interface by default.
+To enable the SPIM interface instead, configure as follows:
+```
+-DSPI_DRIVER=SPIM
+```
+To enable the QSPI interface instead, configure as follows:
+```
+-DSPI_DRIVER=QSPI
+```
 
 #### Flash Layout
 
