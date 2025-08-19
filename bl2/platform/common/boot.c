@@ -1,5 +1,6 @@
 #include "boot_hal.h"
 #include "Driver_Flash.h"
+#include "NuMicro.h"
 
 #ifdef FLASH_DEV_NAME
 extern ARM_DRIVER_FLASH FLASH_DEV_NAME;
@@ -78,6 +79,8 @@ __WEAK void boot_platform_quit(struct boot_arm_vector_table *vt)
 #endif /* FLASH_DEV_NAME */
 
     vt_cpy = vt;
+
+    SCB->VTOR = vt_cpy->reset;
 
 #if defined(__ARM_ARCH_8M_MAIN__) || defined(__ARM_ARCH_8M_BASE__) \
  || defined(__ARM_ARCH_8_1M_MAIN__)
