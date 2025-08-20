@@ -15,7 +15,7 @@ int32_t NVT_NVSPIM_Erase(uint32_t addr);
 #define NVT_NVSPIM_SECTOR_SIZE   (256)
 #define NVT_NVSPIM_PAGE_SIZE     (256)
 #define NVT_NVSPIM_PROGRAM_UNIT  (4)
-#define NVT_NVSPIM_MEMORY_BASE   (0x00100000)
+#define NVT_NVSPIM_MEMORY_BASE   (0)
 #endif
 #endif
 

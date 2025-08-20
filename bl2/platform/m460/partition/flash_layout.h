@@ -34,13 +34,7 @@
 
 /* Secondary slot is in SPI flash */
 #ifdef SECONDARY_SLOT_IN_SPI_FLASH
-/* using SPIM */
-#ifdef USE_SPIM
-#define FLASH_AREA_2_OFFSET        (0x100000)
-#else
-/* using SPI */
-#define FLASH_AREA_2_OFFSET        (0x800000)
-#endif
+#define FLASH_AREA_2_OFFSET        (0)
 #else
 /* Secondary slot is in embedded flash */
 #define FLASH_AREA_2_OFFSET        (0xA0000)

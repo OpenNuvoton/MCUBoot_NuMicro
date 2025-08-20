@@ -16,7 +16,7 @@ int32_t NVT_NVQSPI_WaitReady(void);
 #define NVT_NVQSPI_SECTOR_SIZE   (4096)
 #define NVT_NVQSPI_PAGE_SIZE     (256)
 #define NVT_NVQSPI_PROGRAM_UNIT  (4)
-#define NVT_NVQSPI_MEMORY_BASE   (0x00800000)
+#define NVT_NVQSPI_MEMORY_BASE   (0)
 #define QSPI_FLASH_PORT          QSPI0
 #endif
 #endif

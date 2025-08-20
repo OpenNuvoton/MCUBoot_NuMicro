@@ -16,7 +16,7 @@ int32_t NVT_NVSPI_WaitReady(void);
 #define NVT_NVSPI_SECTOR_SIZE   (4096)
 #define NVT_NVSPI_PAGE_SIZE     (256)
 #define NVT_NVSPI_PROGRAM_UNIT  (4)
-#define NVT_NVSPI_MEMORY_BASE   (0x00800000)
+#define NVT_NVSPI_MEMORY_BASE   (0)
 #define SPI_FLASH_PORT          SPI2
 #endif
 #endif
