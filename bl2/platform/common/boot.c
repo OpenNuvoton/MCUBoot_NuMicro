@@ -80,7 +80,7 @@ __WEAK void boot_platform_quit(struct boot_arm_vector_table *vt)
 
     vt_cpy = vt;
 
-    SCB->VTOR = vt_cpy->reset;
+    SCB->VTOR = (uint32_t) vt_cpy;
 
 #if defined(__ARM_ARCH_8M_MAIN__) || defined(__ARM_ARCH_8M_BASE__) \
  || defined(__ARM_ARCH_8_1M_MAIN__)
