@@ -151,3 +151,29 @@ To work with MCUBoot, the repository [MCUBoot-Compatible-Template](https://githu
 
 CMake Tools provides a convenient interface for working with CMake-based project in VS Code.
 For more details, see the [CMake Tools documentation](https://github.com/microsoft/vscode-cmake-tools/blob/main/docs/README.md)
+
+## FAQ
+
+### How do I change the key type and key value?
+
+Please check out [keys.md](docs/keys.md).
+
+### How do I modify flash partitions?
+
+Please check out [layout.md](docs/layout.md)
+
+### What's required to add support for a new flash device?
+
+- Implement the ARM flash driver interface ([Driver_Flash.c](bl2/platform/common/Driver_Flash.c))
+  - ARM_Flash_GetCapabilities
+  - ARM_Flash_Initialize
+  - ARM_Flash_Uninitialize
+  - ARM_Flash_PowerControl
+  - ARM_Flash_ReadData
+  - ARM_Flash_ProgramData
+  - ARM_Flash_EraseSector
+  - ARM_Flash_GetStatus
+  - ARM_Flash_GetInfo
+- Configure flash layout (`flash_layout.h`)
+
+Refer to existing implementations as reference examples.
