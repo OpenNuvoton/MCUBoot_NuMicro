@@ -177,3 +177,7 @@ Please check out [layout.md](docs/layout.md)
 - Configure flash layout (`flash_layout.h`)
 
 Refer to existing implementations as reference examples.
+
+### How to Configure SPI Driver?
+
+Please check out [spi.md](docs/spi.md)
