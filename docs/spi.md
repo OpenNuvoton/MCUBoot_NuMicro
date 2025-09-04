@@ -43,6 +43,7 @@ GPIO_SetSlewCtl(PG, BIT5 | BIT6 | BIT7 | BIT8, GPIO_SLEWCTL_HIGH);
 To use different SPI interfaces, enable the appropriate interface by setting the corresponding flag:
 
 For QSPI: Set `USE_QSPI=1`
+
 For SPIM: Set `USE_SPIM=1`
 
 The configuration process remains similar across interfaces.
